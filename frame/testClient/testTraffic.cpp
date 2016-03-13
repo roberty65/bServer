@@ -28,8 +28,8 @@ struct proto_h16_res : public proto_h16_head {
 
 #define DIFF_TV(t1, t2)	((long)(((t2)->tv_sec - (t1)->tv_sec) * 1000 + ((t2)->tv_usec - (t1)->tv_usec) / 1000))
 
-static int sizes[] = { 0, 16, 64, 128, KK(1), KK(8), KK(64), KK(256), KK(512), MM(1), MM(4), MM(8), MM(10), MM(20) };
-static int scnt = (int)(sizeof(sizes)/sizeof(sizes[0]));
+//static int sizes[] = { 0, 16, 64, 128, KK(1), KK(8), KK(64), KK(256), KK(512), MM(1), MM(4), MM(8), MM(10), MM(20) };
+//static int scnt = (int)(sizeof(sizes)/sizeof(sizes[0]));
 static int cmd = 1;	// 0: echo, 1: forward
 static int tcnt = 10;
 static int pkgSize = 1024;

@@ -80,12 +80,12 @@ int EventManager::addConnector(const char *address, Queue<Message> *inQueue, Pro
 	int flow = nextFlow();
 	Connector *connector = new Connector(flow, address, this, inQueue, processor);
 
-
 	if (openImmediately && connector->open() < 0) {
 		SYSLOG_ERROR("open Connector to %s failed", address);
 		return -1;
 	}
 
+	mapFlow(flow, connector);
 	return flow;
 }
 
@@ -120,7 +120,7 @@ int EventManager::addConnection(Connection *connection, int events)
 	gettimeofday(&connection->tsLastRead, NULL);
 	_list_add_tail(&connection->lruEntry, &lruHead);
 
-	SYSLOG_DEBUG("addConneciton fd=%d flow OK", connection->fd, connection->flow);
+	SYSLOG_DEBUG("addConneciton fd=%d flow=%d OK", connection->fd, connection->flow);
 	return 0;
 }
 
@@ -174,12 +174,6 @@ Connection *EventManager::flow2Connection(int flow)
 {
 	struct rb_node *n = flowRoot.rb_node;
 	Connection *connection;
-
-//	int i = 0;
-//	for (struct rb_node *pn = rb_first(&flowRoot); pn != NULL; pn = rb_next(pn)) {
-//	Connection *conn = rb_entry(pn, Connection, flowEntry);
-//	SYSLOG_DEBUG("[%d] connection flow=%d fd=%d\n", i, conn->flow, conn->fd);
-//}
 
 	while (n != NULL) {
 		connection = rb_entry(n, Connection, flowEntry);
@@ -312,7 +306,7 @@ void EventManager::checkTimeout()
 	list_for_each_safe(pl, pn, &lruHead) {
 		Connection *connection = list_entry(pl, Connection, lruEntry);
 		if (tNow - connection->tsLastRead.tv_sec > connectionMaxIdle) {
-			SYSLOG_ERROR("connection(fd=%d, flow=%d) timed out. close it now.", connection->fd, connection->flow);
+			SYSLOG_ERROR("connection fd=%d flow=%d timed out. close it now.", connection->fd, connection->flow);
 			connection->onError(connection->fd);
 			continue;
 		}

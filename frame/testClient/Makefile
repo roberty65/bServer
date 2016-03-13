@@ -20,13 +20,17 @@ OBJS = testEcho.o
 DST2 = ./testTraffic
 OBJ2 = testTraffic.o
 
-all: $(DEST) $(DST2)
+DST3 = ./testForward
+OBJ3 = testForward.o
+
+all: $(DEST) $(DST2) $(DST3)
 
 $(DEST): $(OBJS)
 	g++ -o $@ $(OBJS) $(DEPS) $(LIB)
-
 $(DST2): $(OBJ2)
 	g++ -o $@ $(OBJ2) $(DEPS) $(LIB)
+$(DST3): $(OBJ3)
+	g++ -o $@ $(OBJ3) $(DEPS) $(LIB)
 
 .cpp.o:
 	g++ -fPIC -c -o $@ $(INC) $(CXXFLAGS) $<
@@ -34,6 +38,6 @@ $(DST2): $(OBJ2)
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 
 clean:
-	rm -f $(OBJS) $(DST2) $(OBJ2) *~ *.s *.ii *.i
+	rm -f $(OBJS) $(DST2) $(OBJ2) $(DST3) $(OBJ3) *~ *.s *.ii *.i
 distclean: clean
 	rm -f $(DEST)

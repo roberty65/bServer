@@ -77,19 +77,20 @@ int Connector::open()
 		status = CONN_ESTABLISHED;
 	}
 
-	emgr->mapFlow(flow, this);
+	SYSLOG_DEBUG("connector(%s) open OK, fd=%d flow=%d, status=%d", address, fd, flow, (int)status);
 	int retval = emgr->addConnection(this, events);
 	if (retval < 0) {
 		SYSLOG_ERROR("connector(%s) addConnection got error: %m", address);
 		return retval;
 	}
 
-	SYSLOG_DEBUG("connector(%s) open OK, status=%d", address, (int)status);
 	return 0;
 }
 
 int Connector::destroy()
 {
+	SYSLOG_ERROR("connector(%s) is cleared, outQ-size=%d", address, (outMsg == NULL ? 0 : 1) + 0);
+
 	if (outMsg != NULL) {
 		// TODO: push back to the top!!!
 		outQueue->push(outMsg);
@@ -99,7 +100,12 @@ int Connector::destroy()
 	// keep other message in the queue
 	// TODO: check timeout? not here?
 
-	::close(fd);
+	// DO NOT UNMAP FLOW
+	emgr->deleteConnection(this);
+
+	::close(fd); fd = -1;
+	status = CONN_CLOSE;
+
 	return 0;	
 }
 
@@ -107,7 +113,7 @@ int Connector::sendMessage(Message *msg)
 {
 	if (status == CONN_CLOSE) {
 		if (open() < 0) {
-			SYSLOG_WARN("open connector to %s failed", address);
+			SYSLOG_WARN("when sendMessage, open connector to %s failed", address);
 			return -1;
 		}
 

@@ -174,7 +174,6 @@ int Connection::sendMessage(Message *msg)
 		return -1;
 	}
 
-	SYSLOG_ERROR("connection fd=%d flow=%d sendMessge en-outQueue OK", fd, flow);
 	if (outQueue->push(msg) < 0) {
 		SYSLOG_ERROR("connection fd=%d flow=%d sendMessge en-outQueue failed", fd, flow);
 		proc->onSent(msg, SS_QUEUE_FULL);

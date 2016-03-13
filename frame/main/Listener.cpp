@@ -48,14 +48,13 @@ int Listener::onReadable(int fd) {
 		return 0; // ignore
 	}
 
+	SYSLOG_DEBUG("listener(%s) accepted a connection: fd=%d peer=%s", address, cfd, peerName);
 	Connection *connection = createConnection(cfd);
 	if (connection == NULL) {
 		::close(fd);
 		SYSLOG_ERROR("listener(%s) failed to create connection from %s", address, peerName);
 		return 0; // ignore
 	}
-
-	SYSLOG_INFO("listener(%s) got a connection: fd=%d, flow=%d from %s", address, connection->fd, connection->flow, peerName);
 
 	++connActive;
 	return 0;
