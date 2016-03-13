@@ -1,15 +1,15 @@
 INC = -I ../include -I /usr/include/libxml2
 LIB = -lxml2 -lz -lm
 
-CXXFLAGS = -Wall -g -fPIC
+CXXFLAGS = -Wall -g -fPIC #-O3
 LDFLAGS  =
 
 DEST = ../lib/libcommon.a
 OBJS = xbs_naddr.o xbs_io.o xbs_socket.o nam2val.o md5.o \
-       slab_cache.o rbtree.o pid_file.o proto_h16.o
+       slab_cache.o rbtree.o proto_h16.o
 #
 # has depends on libxml2 log4cpp
-#iprestriction.o log.o xmlconfig.o 
+# log.o xmlconfig.o 
 
 all: $(DEST)
 

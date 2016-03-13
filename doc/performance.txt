@@ -1,0 +1,6 @@
+1, without -O3, local vmare CentOS 7. Both testTraffic and bServerd run the vm.
+	send/recv 1K packages by 10 threads.
+	45MB/s
+2,  with -O3, same above env
+	53MB/s
+    by Roberty65 on Mar 12, 2012

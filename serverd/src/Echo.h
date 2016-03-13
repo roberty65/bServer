@@ -38,6 +38,10 @@ public:
 	virtual int onMessage(beyondy::Async::Message *req);
 	virtual int onSent(beyondy::Async::Message *msg, int status);
 private:
+	int doEcho(beyondy::Async::Message *req);
+	int doForward(beyondy::Async::Message *req);
+	int doMore(beyondy::Async::Message *req);
+private:
 	size_t maxInputSize;
 	size_t maxOutputSize;
 };

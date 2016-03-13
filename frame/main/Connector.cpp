@@ -26,6 +26,7 @@ Connector::Connector(int _flow, const char *_address, EventManager *_emgr, Queue
 
 int Connector::onWritable(int fd)
 {
+	SYSLOG_DEBUG("connector(%s) is onWritable", address);
 	assert(this->fd == fd);
 
 	if (status == CONN_ESTABLISHED) {
@@ -40,10 +41,16 @@ int Connector::onWritable(int fd)
 			}
 
 			status = CONN_ESTABLISHED;
+			if (emgr->modifyConnection(this, EVENT_IN, 0) < 0) {
+				SYSLOG_ERROR("connector(%s) fd=%d flow=%d add EVENT_IN failed: %m", address, fd, flow);
+				return -1;
+			}
+
+			SYSLOG_ERROR("connector(%s) establish done: fd=%d flow=%d", address, fd, flow);
 			return Connection::onWritable(fd);
 	}
 
-	SYSLOG_ERROR("connector %s is writable in CLOSE state", address);
+	SYSLOG_ERROR("connector %s is writable but in CLOSE state", address);
 	return 0; // why here?
 }
 
@@ -52,23 +59,32 @@ int Connector::open()
 	struct sockaddr_storage addr_buf;
 	socklen_t addr_len = sizeof(addr_buf);
 	int type, protocol;
-	int fd;
 
 	if (XbsPaddr2n(address, &type, &protocol, (struct sockaddr *)&addr_buf, &addr_len) < 0) return -1;
 	if ((fd = XbsSocket(addr_buf.ss_family, type, protocol)) < 0) return -1;
 	if (XbsSetFlags(fd, O_NONBLOCK, 0) < 0) return -1;
 	if (XbsConnect(fd, (struct sockaddr *)&addr_buf, addr_len, 0) < 0) {
 		if (errno == EINPROGRESS) {
+			events = EVENT_OUT;
 			status = CONN_OPENNING;
 		}
 		else {
 			return -1;
 		}
 	} 
+	else {
+		events = EVENT_IN;
+		status = CONN_ESTABLISHED;
+	}
 
-	emgr->mapFlow(flow, fd);
-	emgr->addConnection(this, EVENT_OUT);
+	emgr->mapFlow(flow, this);
+	int retval = emgr->addConnection(this, events);
+	if (retval < 0) {
+		SYSLOG_ERROR("connector(%s) addConnection got error: %m", address);
+		return retval;
+	}
 
+	SYSLOG_DEBUG("connector(%s) open OK, status=%d", address, (int)status);
 	return 0;
 }
 
@@ -94,14 +110,19 @@ int Connector::sendMessage(Message *msg)
 			SYSLOG_WARN("open connector to %s failed", address);
 			return -1;
 		}
+
+		SYSLOG_DEBUG("connector(%s) open OK when sendMessage", address);
 	}
 
 	if (status == CONN_OPENNING) {
+		SYSLOG_DEBUG("connector(%s) is openning when sendMessage", address);
 		outQueue->push(msg);
 		return 0;
 	}
 
 	assert(status == CONN_ESTABLISHED);
+	SYSLOG_DEBUG("connector(%s) is established when sendMessage", address);
+
 	return Connection::sendMessage(msg);
 }
 

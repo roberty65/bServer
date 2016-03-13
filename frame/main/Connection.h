@@ -3,6 +3,7 @@
 
 #include "EventHandler.h"
 #include "beyondy/list.h"
+#include "beyondy/rbtree.h"
 
 namespace beyondy {
 namespace Async {
@@ -35,6 +36,7 @@ public: // getter??
 	int flow;
 	struct list_head lruEntry;	// LRU entry. must be public
 	struct timeval tsLastRead;
+	struct rb_node flowEntry;	// flow mapping to this object
 protected:
 	Message *inMsg;
 	Queue<Message> *inQueue;	// shared

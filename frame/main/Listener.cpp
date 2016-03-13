@@ -77,7 +77,7 @@ Connection *Listener::createConnection(int cfd)
 	
 	Connection *connection = new Connection(cfd, flow, emgr, inQueue, proc, CT_LISTENER, static_cast<void *>(this));
 	if (connection != NULL) {
-		emgr->mapFlow(flow, cfd);
+		emgr->mapFlow(flow, connection);
 		emgr->addConnection(connection, EVENT_IN);
 	}
 	else {
@@ -91,7 +91,7 @@ void Listener::destroyConnection(Connection *connection)
 {
 	SYSLOG_INFO("listener(%s) close its connection: fd=%d, flow=%d", address, connection->fd, connection->flow);
 
-	emgr->unmapFlow(connection->flow);
+	emgr->unmapFlow(connection);
 	emgr->deleteConnection(connection);
 	::close(connection->fd);
 

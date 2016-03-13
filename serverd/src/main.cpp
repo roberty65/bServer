@@ -21,7 +21,7 @@ static const char *logFileName = "../logs/server.log";
 static long logFileMaxSize = 10*1024*1024;
 static long logMaxBackup = 10;
 
-static const char *listenAddress = "inet@0.0.0.0:5010/tcp";
+static const char *listenAddress = NULL;
 static int listenBacklog = 1024;
 static int listenMaxConnection = 2000;
 
@@ -29,16 +29,17 @@ static int systemThreadCount = 100;
 static int systemInQueueSize = 8000;
 static int systemOutQueueSize = 9000;
 
-static const char *businessProcessor = "../lib/libEcho.so";
+static const char *businessProcessor = NULL;
 
 static int connectionIdleTimeout = 5;
 static int connectionOutQueueSize = 10;
 
-static const char *connectorAddress = NULL; //"inet@127.0.0.1:5011/tcp";
+static const char *connectorAddress = NULL;
 static int connectorHelloInterval = 5;
 
 static int parseNameValue(const char *name, const char *val)
 {
+	fprintf(stderr, "%s=%s\n", name, val);
 	if (strcmp(name, "logLevel") == 0) {
 		if (strcmp(val, "FATAL") == 0) logLevel = LOG_LEVEL_FATAL;
 		else if (strcmp(val, "ERROR") == 0) logLevel = LOG_LEVEL_ERROR;
@@ -174,6 +175,17 @@ static void usage(const char *p)
 	exit(0);
 }
 
+extern "C" void appCallback(const char* s)
+{
+	fprintf(stderr, "appCallback: %s\n", s);
+}
+
+// must be called in Processor->onInit
+extern "C" int addConnector(const char *address, int openImmediately)
+{
+
+}
+
 int main(int argc, char **argv)
 {
 	const char *etcFile = "../conf/server.conf";
@@ -264,6 +276,7 @@ int main(int argc, char **argv)
 	}
 
 	if (connectorAddress != NULL) {
+		SYSLOG_DEBUG("connector=%s, interval=%d", connectorAddress, connectorHelloInterval);
 		int cid = emgr->addConnector(connectorAddress, inQ, processor, 1);
 		if (cid < 0) {
 			SYSLOG_ERROR("addConnector failed");

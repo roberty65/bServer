@@ -48,6 +48,7 @@ int Block::resize(size_t nsize, size_t usedSize)
 
 	buf = nbuf;
 	bsize = nsize;
+	autoDelete = true;
 
 	return 0;
 }

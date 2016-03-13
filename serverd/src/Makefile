@@ -11,7 +11,7 @@ FRM_SRC=../../frame/main/
 INC = -I $(COM_INC) -I $(FSH_INC) -I $(FRM_SRC)
 LIB = -L $(FRM_SRC) -lFrame -L $(FSH_LIB) -lProcessor -L $(COM_LIB) -lcommon -ldl -lpthread
 
-CXXFLAGS = -Wall -g -fPIC
+CXXFLAGS = -Wall -g -fPIC #-O3
 LDFLAGS  =
 
 DEST = ../bin/bServerd
@@ -23,10 +23,11 @@ OBJ2 = Echo.o $(FRM_SRC)Log.o $(FSH_SRC)Message.o $(FSH_SRC)Block.o
 all: $(DEST) $(LIBO)
 
 $(DEST): $(OBJS)
-	g++ -o $@ $(OBJS) $(DEPS) $(LIB)
+	g++ -o $@ -rdynamic $(OBJS) $(DEPS) $(LIB)
+	#g++ -o $@ $(OBJS) $(DEPS) $(LIB) #-Wl,--dynamic-list=export.syms
 
 $(LIBO): $(OBJ2)
-	g++ -o $@ -shared $(OBJ2)
+	g++ -o $@ -shared $(OBJ2) #-ldl
 
 .cpp.o:
 	g++ -fPIC -c -o $@ $(INC) $(CXXFLAGS) $<

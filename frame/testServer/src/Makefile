@@ -11,7 +11,7 @@ FRM_SRC=../../main/
 INC = -I $(COM_INC) -I $(FSH_INC) -I $(FRM_SRC)
 LIB = -L $(FRM_SRC) -lFrame -L $(FSH_LIB) -lProcessor -L $(COM_LIB) -lcommon -lpthread
 
-CXXFLAGS = -Wall -g -fPIC
+CXXFLAGS = -Wall -g -fPIC -O3
 LDFLAGS  =
 
 DEST = ../bin/testServerd

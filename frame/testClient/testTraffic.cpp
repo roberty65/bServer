@@ -1,11 +1,12 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/types.h>
-#include <sys/fcntl.h>
 #include <sys/time.h>
-#include <pthread.h>
+#include <sys/fcntl.h>
+#include <arpa/inet.h>
 #include <errno.h>
-
 #include <beyondy/xbs_socket.h>
 #include <beyondy/xbs_io.h>
 
@@ -21,94 +22,158 @@ struct proto_h16_res : public proto_h16_head {
 	int32_t ret_;
 };
 
-#define MAX_PSIZE	8100
-#define BUF_SIZE	8192
+#define KK(n)	((n) * 1024)
+#define MM(n)	((n) * 1024 * 1024)
+#define GG(n)	((n) * 1024 * 1024 * 1024)
 
-static const char* host;
-static long tcnt, rcnt, psize;
-static long idx = 0;
+#define DIFF_TV(t1, t2)	((long)(((t2)->tv_sec - (t1)->tv_sec) * 1000 + ((t2)->tv_usec - (t1)->tv_usec) / 1000))
 
-pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
-static long next()
+static int sizes[] = { 0, 16, 64, 128, KK(1), KK(8), KK(64), KK(256), KK(512), MM(1), MM(4), MM(8), MM(10), MM(20) };
+static int scnt = (int)(sizeof(sizes)/sizeof(sizes[0]));
+static int cmd = 1;	// 0: echo, 1: forward
+static int tcnt = 10;
+static int pkgSize = 1024;
+
+static volatile long *countSend = NULL;
+static volatile long *countRecv = NULL;
+
+static const char *host = "inet@127.0.0.1:5010/tcp";
+static int timeout = 30000;
+
+static int __send_req(int fd, int cmd, char *reqbuf, int size, const char *tag)
 {
-	pthread_mutex_lock(&m);
-	long nxt = idx++;
-	pthread_mutex_unlock(&m);
-	return nxt;
+	struct proto_h16_head *h = (struct proto_h16_head *)reqbuf;
+	int msize = size + sizeof(*h);
+
+	h->len = msize;
+	h->cmd = cmd;
+	h->ver = 1;
+	h->syn = 2;
+	h->ack = 3;
+
+//	if (size >= (int)sizeof(int)) {
+//		*(int *)(reqbuf + sizeof *h) = random() % 3000;
+//	}	
+
+	ssize_t wlen = beyondy::XbsWriteN(fd, reqbuf, msize, timeout);
+	if (wlen != msize) {
+		fprintf(stdout, "FAIL: %s pkg-size=%d, write req failed: %m\n", tag, size);
+		return -1;	
+	}
+
+	return 0;
 }
 
-static void *thread_entry(void *p)
+static int __read_rsp(int fd, char *rspbuf, int size, const char *tag)
 {
-	int fd = beyondy::XbsClient(host, 0 /* O_NONBLOCK */, 30000);
+	int msize = size + sizeof(struct proto_h16_head);
+	ssize_t rlen = beyondy::XbsReadN(fd, rspbuf, msize, timeout);
+
+	if (rlen != msize) {
+		fprintf(stdout, "FAIL: %s pkg-size=%d, read rsp failed: %m\n", tag, msize);
+		return -1;	
+	}
+
+	return 0;
+}
+
+
+static void *worker(void *p)
+{
+	int id = (int)(long)p;
+	char tag[128]; snprintf(tag, sizeof tag, "thread-%d", id);
+
+	char *reqbuf = new char[sizeof(struct proto_h16_head) + pkgSize];
+	char *rspbuf = new char[sizeof(struct proto_h16_res) + pkgSize];
+
+	int fd = beyondy::XbsClient(host, O_NONBLOCK, 30000);
 	if (fd < 0) {
-		perror("connect to host failed");
+		fprintf(stdout, "%s connect failed: %m\n", tag);
 		exit(1);
 	}
-	
-	char buf[BUF_SIZE], rbuf[BUF_SIZE];
-	struct proto_h16_head h;
-	struct proto_h16_res r;
-	long nxt;
 
-	while ((nxt = next()) < rcnt) {
-		h.len = sizeof h + psize;
-		h.cmd = 0;
-		h.ver = 1;
-		h.syn = nxt;
-		h.ack = 0;
-		memcpy(buf, &h, sizeof h);
-		//for (int i = 0; i < psize; ++i) buf[sizeof h + i] = i;
-
-		ssize_t wlen = beyondy::XbsWriteN(fd, buf, h.len, 10000);
-		if (wlen != h.len) {
-			perror("write error");
-			exit(1);
+	while (true) {	
+		if (__send_req(fd, cmd, reqbuf, pkgSize, tag) < 0) {
+			fprintf(stdout, "%s send req failed: %m\n", tag);
+			break;
 		}
 
-		ssize_t rlen = beyondy::XbsReadN(fd, rbuf, wlen, 10000);
-		if ((size_t)rlen != (size_t)wlen) {
-			perror("read error");
-			exit(2);
+		++countSend[id];
+		if (__read_rsp(fd, rspbuf, pkgSize, tag) < 0) {
+			fprintf(stdout, "%s read rsp failed: %m\n", tag);
+			break;
 		}
 
-		memcpy(&r, rbuf, sizeof r);
-		//fprintf(stdout, "rsp-size=%ld, ret=%d\n", (long)rlen, r.ret_);
+		++countRecv[id];
 	}
 
-	close(fd);
 	return NULL;
 }
 
 int main(int argc, char **argv)
 {
-	if (argc != 5) {
-		fprintf(stderr, "Usage: %s host thread-cnt request-cnt pkg-size\n", argv[0]);
+	if (argc < 2) {
+usage:
+		fprintf(stderr, "Usage: %s [-c cmd ] [-t thread-cnt] [-s pkg-size] host\n", argv[0]);
 		exit(0);
 	}
 
-	struct timeval t1, t2;
+	int ch;
+	while ((ch = getopt(argc, argv, "c:t:s:h")) != EOF) {
+		switch (ch) {
+		case 'c': cmd = atoi(optarg); break;
+		case 't': tcnt = atoi(optarg); break;
+		case 's': pkgSize = atoi(optarg); break;
+		case 'h': goto usage;
+		default: goto usage;
+		}
+	}
+
+	if (optind >= argc) goto usage;
+	host = strdup(argv[optind]);
+
+	countSend = new long[tcnt];
+	countRecv = new long[tcnt];
+	for (int i = 0; i < tcnt; ++i) countSend[i] = countRecv[i] = 0;
+
+	srandom(time(NULL));
+	setbuf(stdout, NULL);
+
 	pthread_t tids[tcnt];
-	
-	host = argv[1];
-	tcnt = atol(argv[2]);
-	rcnt = atol(argv[3]);
-	psize = atol(argv[4]);
+	for (int i = 0; i < tcnt; ++i) {
+		errno = pthread_create(&tids[i], NULL, worker, (void *)(long)i);
+		if (errno) {
+			fprintf(stdout, "create the %dth thread failed: %m\n", i);
+			exit(1);
+		}
+	}
+
+	long lastSend = 0, lastRecv = 0;
+	struct timeval t1, t2;
 
 	gettimeofday(&t1, NULL);
-	for (int i = 0; i < tcnt; ++i) {
-		int retval = pthread_create(&tids[i], NULL, thread_entry, NULL);
-		if (retval != 0) { errno = retval; perror("pthread_create failed"); exit(1); }
+	while (true) {
+		sleep(10);
+		long thisSend = 0, thisRecv = 0;
+
+		for (int i = 0; i < tcnt; ++i) {
+			thisSend += countSend[i];
+			thisRecv += countRecv[i];
+		}
+
+		gettimeofday(&t2, NULL);
+		struct tm tmbuf, *ptm = localtime_r(&t2.tv_sec, &tmbuf);
+		double ms = (t2.tv_sec - t1.tv_sec) * 1000.0 + (t2.tv_usec - t1.tv_usec) / 1000.0;
+
+		fprintf(stdout, "%02d:%02d:%02d send %8ld %.2fpkg/s %.2fMB/s recv %8ld %.2fpkg/s %.2fMB/s\n",
+			ptm->tm_hour, ptm->tm_min, ptm->tm_sec,
+			thisSend - lastSend, 1000.0 * (thisSend - lastSend) / ms, 1000.0 * (thisSend - lastSend) / ms * pkgSize / 1e6,
+			thisRecv - lastRecv, 1000.0 * (thisRecv - lastRecv) / ms, 1000.0 * (thisRecv - lastRecv) / ms * pkgSize / 1e6);
+
+		t1 = t2;
+		lastSend = thisSend;
+		lastRecv = thisRecv;
 	}
 
-	for (int i = 0; i < tcnt; ++i) {
-		pthread_join(tids[i], NULL);
-	}
-
-	gettimeofday(&t2, NULL);
-	double ms = (t2.tv_sec - t1.tv_sec) * 1000.0 + (t2.tv_usec - t1.tv_usec) / 1000.0;
-	if (ms < 1.0) ms = 1.0;
-	fprintf(stdout, "%ld threads handled %ld requests sized %ld in %5.3fms. Performance is %5.3f#/s.\n",
-		tcnt, rcnt, psize, ms, rcnt * 1000.0 / ms);
-	
 	return 0;
 }

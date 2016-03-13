@@ -5,6 +5,7 @@
 #include <map>
 
 #include "beyondy/list.h"
+#include "beyondy/rbtree.h"
 
 namespace beyondy {
 namespace Async {
@@ -34,11 +35,12 @@ public:
 	int addConnection(Connection *connection, int events);
 	int modifyConnection(Connection *connection, int add, int remove);
 	int deleteConnection(Connection *connection);
+private:
+	Connection *__insert(int flow, struct rb_node *node);
 public:
 	int nextFlow();
-	int mapFlow(int flow, int fd);
-	int updateFlow(int flow, int fd);
-	int unmapFlow(int flow);
+	int mapFlow(int flow, Connection *connection);
+	int unmapFlow(Connection *connection);
 private:
 	int waitingEvents();
 	void handleEvents();
@@ -63,17 +65,13 @@ private:
 	/* LRU list */
 	struct list_head lruHead;
 	
-	int connections_max;
-	Connection **connections_arr;
-
-	// TODO: more fast mapping?
 	int next_flow;
-	std::map<int, int> flow2fdMap;
+	struct rb_root flowRoot;	/* flow => connection */
 
 	int isRunning;
 
 	int perCheckOutQueue;
-	int connectionMaxIdle;	/* seconds */
+	int connectionMaxIdle;		/* seconds */
 	
 };
 } /* Async */

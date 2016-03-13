@@ -11,16 +11,22 @@ FRM_SRC=../main/
 INC = -I $(COM_INC) -I $(FSH_INC) -I $(FRM_SRC)
 LIB =  -L $(COM_LIB) -lcommon -lpthread
 
-CXXFLAGS = -Wall -g -fPIC
+CXXFLAGS = -Wall -g -fPIC -O3
 LDFLAGS  =
 
 DEST = ./testEcho
 OBJS = testEcho.o
 
-all: $(DEST)
+DST2 = ./testTraffic
+OBJ2 = testTraffic.o
+
+all: $(DEST) $(DST2)
 
 $(DEST): $(OBJS)
 	g++ -o $@ $(OBJS) $(DEPS) $(LIB)
+
+$(DST2): $(OBJ2)
+	g++ -o $@ $(OBJ2) $(DEPS) $(LIB)
 
 .cpp.o:
 	g++ -fPIC -c -o $@ $(INC) $(CXXFLAGS) $<
@@ -28,6 +34,6 @@ $(DEST): $(OBJS)
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 
 clean:
-	rm -f $(OBJS) *~ *.s *.ii *.i
+	rm -f $(OBJS) $(DST2) $(OBJ2) *~ *.s *.ii *.i
 distclean: clean
 	rm -f $(DEST)

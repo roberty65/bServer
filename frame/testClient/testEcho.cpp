@@ -30,10 +30,11 @@ struct proto_h16_res : public proto_h16_head {
 
 static int sizes[] = { 0, 16, 64, 128, KK(1), KK(8), KK(64), KK(256), KK(512), MM(1), MM(4), MM(8), MM(10), MM(20) };
 static int scnt = (int)(sizeof(sizes)/sizeof(sizes[0]));
+static int cmd = 1;	// 0: echo, 1: forward
 static int tcnt = 10;
 
 static const char *host = "inet@127.0.0.1:5010/tcp";
-static int timeout = 15000;
+static int timeout = 30000;
 
 static void __send_req(int fd, int cmd, int size, const char *tag)
 {
@@ -50,7 +51,7 @@ static void __send_req(int fd, int cmd, int size, const char *tag)
 	h->ack = 3;
 
 	if (size >= (int)sizeof(int)) {
-		*(int *)(reqbuf + sizeof *h) = random() % 3;
+		*(int *)(reqbuf + sizeof *h) = random() % 3000;
 	}	
 
 	ssize_t wlen = beyondy::XbsWriteN(fd, reqbuf, msize, timeout);
@@ -85,7 +86,7 @@ static void __test001_sync_req_rsp(int fd, int size)
 	struct timeval t1, t2, t3;
 
 	gettimeofday(&t1, NULL);
-	__send_req(fd, 1, size, tag);
+	__send_req(fd, cmd, size, tag);
 
 	gettimeofday(&t2, NULL);
 	__read_rsp(fd, size, tag);
@@ -124,7 +125,7 @@ static void *__test002_sender_entry(void *p)
 		struct timeval t1, t2;
 
 		gettimeofday(&t1, NULL);
-		__send_req(fd, 2, sizes[i], tag);
+		__send_req(fd, cmd, sizes[i], tag);
 
 		gettimeofday(&t2, NULL);
 		fprintf(stdout, "%s send req with pkg-size=%ld took %ldms\n", \
@@ -198,7 +199,7 @@ static void *__test003_worker(void *p)
 		struct timeval t1, t2, t3;
 
 		gettimeofday(&t1, NULL);	
-		__send_req(fd, 3, sizes[i], tag);
+		__send_req(fd, cmd, sizes[i], tag);
 
 		gettimeofday(&t2, NULL);
 		__read_rsp(fd, sizes[i], tag);
@@ -249,7 +250,7 @@ static void test004_mt_async_req_rsp()
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
-		fprintf(stderr, "Usage: %s host [thread-cnt]\n", argv[0]);
+		fprintf(stderr, "Usage: %s host [cmd] [thread-cnt]\n", argv[0]);
 		exit(0);
 	}
 
@@ -257,7 +258,8 @@ int main(int argc, char **argv)
 	setbuf(stdout, NULL);
 
 	host = argv[1];
-	if (argc >= 3) tcnt = atoi(argv[2]);
+	if (argc >= 3) cmd = atoi(argv[2]);
+	if (argc >= 4) tcnt = atoi(argv[3]);
 
 	test001_sync_req_rsp();
 	test002_async_req_rsp();

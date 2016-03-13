@@ -51,21 +51,8 @@ EventManager::EventManager(Queue<Message> *_outQueue, int _esize)
 		throw std::runtime_error("rlimit(NOFILE) failed");
 	}
 
-	connections_max = r0.rlim_cur;
-	connections_arr = (Connection **)malloc(connections_max * sizeof(Connection *));
-	if (connections_arr == NULL) {
-		::close(epoll_fd);
-
-		char buf[512];
-		snprintf(buf, sizeof buf, "new connections arr [%ld] failed: %m", (long)connections_max);
-		throw std::runtime_error(buf);
-	}
-
-	for (int i = 0; i < connections_max; ++i) {
-		connections_arr[i] = NULL;
-	}
-
 	next_flow = 1;
+	flowRoot.rb_node = NULL;
 
 	perCheckOutQueue = 100;
 	connectionMaxIdle = 5;
@@ -111,22 +98,29 @@ int EventManager::addHandler(EventHandler *handler, int events)
 	ee.data.ptr = (void *)handler;
 	
 	retval = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, handler->fd, &ee);
-	if (retval == 0) handler->events = events;
+	if (retval == 0) {
+		handler->events = events;
+		SYSLOG_DEBUG("addHandler fd=%d events=%d OK", handler->fd, events);
+	}
+	else {
+		SYSLOG_DEBUG("addHandler fd=%d failed: %m", handler->fd);
+	}
 
 	return retval;
 }
 
 int EventManager::addConnection(Connection *connection, int events)
 {
-	if (addHandler(connection, events) < 0)
+	if (addHandler(connection, events) < 0) {
+		SYSLOG_ERROR("can not add connection fd=%d flow=%d", connection->fd, connection->flow);
 		return -1;
+	}
 
 	/* init it */
 	gettimeofday(&connection->tsLastRead, NULL);
-
-	connections_arr[connection->fd] = connection;
 	_list_add_tail(&connection->lruEntry, &lruHead);
 
+	SYSLOG_DEBUG("addConneciton fd=%d flow OK", connection->fd, connection->flow);
 	return 0;
 }
 
@@ -139,6 +133,14 @@ int EventManager::modifyConnection(Connection *connection, int add, int remove)
 	ee.data.ptr = (void *)(EventHandler *)connection;
 
 	retval = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, connection->fd, &ee);
+	if (retval == 0) {
+		connection->events = ee.events;
+		SYSLOG_DEBUG("modifyConneciton fd=%d flow=%d events=%d OK", connection->fd, connection->flow, ee.events);
+	}
+	else {
+		SYSLOG_DEBUG("modifyConneciton fd=%d flow=%d events=%d failed: %m", connection->fd, connection->flow, ee.events);
+	}
+
 	return retval;
 }
 
@@ -151,42 +153,84 @@ int EventManager::deleteConnection(Connection *connection)
 	ee.data.ptr = (void *)(EventHandler *)connection;
 
 	if (!(retval = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, connection->fd, &ee))) {
-		connections_arr[connection->fd] = NULL;
 		_list_del(&connection->lruEntry);
+
+		SYSLOG_ERROR("delete connection fd=%d flow=%d", connection->fd, connection->flow);
+	}
+	else {
+		SYSLOG_ERROR("delete connection fd=%d flow=%d failed: %m", connection->fd, connection->flow);
 	}
 	
 	return retval;
 }
 
-int EventManager::nextFlow() {
+int EventManager::nextFlow()
+{
 	int flow = next_flow++;
 	return flow;
 }
 
-int EventManager::mapFlow(int flow, int fd)
+Connection *EventManager::flow2Connection(int flow)
 {
-	assert(flow2fdMap.find(flow) == flow2fdMap.end());
-	flow2fdMap.insert(std::pair<int, int>(flow, fd));
+	struct rb_node *n = flowRoot.rb_node;
+	Connection *connection;
 
-	SYSLOG_DEBUG("mapFlow=%d => %d", flow, fd);
+//	int i = 0;
+//	for (struct rb_node *pn = rb_first(&flowRoot); pn != NULL; pn = rb_next(pn)) {
+//	Connection *conn = rb_entry(pn, Connection, flowEntry);
+//	SYSLOG_DEBUG("[%d] connection flow=%d fd=%d\n", i, conn->flow, conn->fd);
+//}
+
+	while (n != NULL) {
+		connection = rb_entry(n, Connection, flowEntry);
+		if (flow < connection->flow)
+			n = n->rb_left;
+		else if (flow > connection->flow)
+			n = n->rb_right;
+		else
+			return connection;
+	}
+
+	return NULL;
+}
+
+Connection *EventManager::__insert(int flow, struct rb_node *node)
+{
+	struct rb_node **p = &flowRoot.rb_node;
+	struct rb_node *parent = NULL;
+	struct Connection *connection;
+
+	while (*p != NULL) {
+		parent = *p;
+		connection = rb_entry(parent, Connection, flowEntry);
+		if (flow > connection->flow)
+			p = &(*p)->rb_right;
+		else if (flow < connection->flow)
+			p = &(*p)->rb_left;
+		else
+			return connection;
+	}
+
+	rb_link_node(node, parent, p);
+	return NULL;
+}
+
+int EventManager::mapFlow(int flow, Connection *connection)
+{
+	assert(flow2Connection(flow) == NULL);
+	Connection *ret = __insert(flow, &connection->flowEntry);
+	if (ret == NULL) rb_insert_color(&connection->flowEntry, &flowRoot);
+
+	SYSLOG_DEBUG("mapFlow=%d => %d", flow, connection->fd);
 	return 0;
 }
 
-int EventManager::updateFlow(int flow, int fd)
+int EventManager::unmapFlow(Connection *connection)
 {
-	assert(flow2fdMap.find(flow) != flow2fdMap.end());
-	SYSLOG_DEBUG("updateFlow=%d => %d (new=%d)", flow, flow2fdMap[flow], fd);
-	flow2fdMap[flow] = fd;
-
-	return 0;
-}
-
-int EventManager::unmapFlow(int flow)
-{
-	assert(flow2fdMap.find(flow) != flow2fdMap.end());
-	SYSLOG_DEBUG("upmapFlow=%d => %d", flow, flow2fdMap[flow]);
-	flow2fdMap.erase(flow);
-
+	assert(flow2Connection(connection->flow) != NULL);
+	SYSLOG_DEBUG("upmapFlow=%d => %d", connection->flow, connection->fd);
+		
+	rb_erase(&connection->flowEntry, &flowRoot);
 	return 0;
 }
 
@@ -233,19 +277,6 @@ void EventManager::handleEvents()
 	}
 
 	return;
-}
-
-Connection *EventManager::flow2Connection(int flow)
-{
-	std::map<int, int>::iterator iter = flow2fdMap.find(flow);
-	if (iter == flow2fdMap.end())
-		return NULL;
-
-	int fd = iter->second;
-	if (fd < 0 || fd >= connections_max)
-		return NULL;
-
-	return connections_arr[fd];
 }
 
 void EventManager::dispatchOutMessage()
