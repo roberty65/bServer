@@ -1,0 +1,82 @@
+#ifndef __EVENT_MANAGER__H
+#define __EVENT_MANAGER__H
+
+#include <sys/epoll.h>
+#include <map>
+
+#include "beyondy/list.h"
+
+namespace beyondy {
+namespace Async {
+
+#define EVENT_IN	EPOLLIN
+#define EVENT_OUT	EPOLLOUT
+#define EVENT_ERR	EPOLLERR
+
+
+class Message;
+template<class T> class Queue;
+class Processor;
+class EventHandler;
+class Connection;
+
+class EventManager {
+public:
+	EventManager(Queue<Message> *outQueue, int esize);
+public:
+	// must be called be start is called by ONE thread
+	int addListener(const char *address, Queue<Message> *inQueue, Processor *processor, int maxActive);
+	int addConnector(const char *address, Queue<Message> *inQueue, Processor *process, int openImmediately);
+private:
+	//internal use, no lock?!
+	int addHandler(EventHandler *handler, int events);
+public:
+	int addConnection(Connection *connection, int events);
+	int modifyConnection(Connection *connection, int add, int remove);
+	int deleteConnection(Connection *connection);
+public:
+	int nextFlow();
+	int mapFlow(int flow, int fd);
+	int updateFlow(int flow, int fd);
+	int unmapFlow(int flow);
+private:
+	int waitingEvents();
+	void handleEvents();
+	void handleEvent(int fd, EventHandler *handler, int event);
+	Connection *flow2Connection(int flow);
+	void dispatchOutMessage();
+	void checkTimeout();
+public:
+	int start();
+
+private:
+	int epoll_fd;
+
+	int event_next;
+	int event_total;
+	
+	int epoll_size;
+	struct epoll_event *epoll_events;
+
+	Queue<Message> *outQueue;
+	
+	/* LRU list */
+	struct list_head lruHead;
+	
+	int connections_max;
+	Connection **connections_arr;
+
+	// TODO: more fast mapping?
+	int next_flow;
+	std::map<int, int> flow2fdMap;
+
+	int isRunning;
+
+	int perCheckOutQueue;
+	int connectionMaxIdle;	/* seconds */
+	
+};
+} /* Async */
+}/* beyondy */
+
+#endif /*__EVENT_MANAGER__H */

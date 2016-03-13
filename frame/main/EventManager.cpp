@@ -1,0 +1,344 @@
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdexcept>
+#include <errno.h>
+#include <assert.h>
+
+#include "Queue.h"
+#include "Listener.h"
+#include "Connection.h"
+#include "Connector.h"
+#include "Message.h"
+#include "EventManager.h"
+#include "Log.h"
+
+namespace beyondy {
+namespace Async {
+
+EventManager::EventManager(Queue<Message> *_outQueue, int _esize)
+	: epoll_fd(-1), event_next(0), event_total(0), epoll_size(_esize), epoll_events(NULL),
+	  outQueue(_outQueue)
+{
+	if (epoll_size < 1) epoll_size = 1024;
+
+	if ((epoll_fd = epoll_create(epoll_size)) < 0) {
+		char buf[512];
+		snprintf(buf, sizeof buf, "epoll_create(%ld) failed: %m", (long)epoll_size);
+		throw std::runtime_error(buf);
+	}
+
+	epoll_events = (struct epoll_event *)malloc(epoll_size * sizeof(struct epoll_event));
+	if (epoll_events == NULL) {
+		::close(epoll_fd);
+
+		char buf[512];
+		snprintf(buf, sizeof buf, "new epoll events[%ld] failed: %m", (long)epoll_size);
+		throw std::runtime_error(buf);
+	}
+
+	event_next = 0;
+	event_total = 0;
+
+	INIT_LIST_HEAD(&lruHead);
+		
+	struct rlimit r0;
+	int retval = getrlimit(RLIMIT_NOFILE, &r0);
+	if (retval < 0) {
+		throw std::runtime_error("rlimit(NOFILE) failed");
+	}
+
+	connections_max = r0.rlim_cur;
+	connections_arr = (Connection **)malloc(connections_max * sizeof(Connection *));
+	if (connections_arr == NULL) {
+		::close(epoll_fd);
+
+		char buf[512];
+		snprintf(buf, sizeof buf, "new connections arr [%ld] failed: %m", (long)connections_max);
+		throw std::runtime_error(buf);
+	}
+
+	for (int i = 0; i < connections_max; ++i) {
+		connections_arr[i] = NULL;
+	}
+
+	next_flow = 1;
+
+	perCheckOutQueue = 100;
+	connectionMaxIdle = 5;
+}
+
+int EventManager::addListener(const char *address, Queue<Message> *inQueue, Processor *processor, int maxActive)
+{
+	Listener *listener = new Listener(address, maxActive, this, inQueue, processor);
+	if (listener == NULL) {
+		SYSLOG_ERROR("open listener at %s failed", address);
+		return -1;
+	}
+	
+	if (listener->open() < 0 || this->addHandler(listener, EVENT_IN) < 0) {
+		SYSLOG_ERROR("open or watch-IN failed for listener at %s", address);
+		delete listener;
+		return -1;
+	}
+
+	return 0;
+}
+
+int EventManager::addConnector(const char *address, Queue<Message> *inQueue, Processor *processor, int openImmediately)
+{
+	int flow = nextFlow();
+	Connector *connector = new Connector(flow, address, this, inQueue, processor);
+
+
+	if (openImmediately && connector->open() < 0) {
+		SYSLOG_ERROR("open Connector to %s failed", address);
+		return -1;
+	}
+
+	return flow;
+}
+
+int EventManager::addHandler(EventHandler *handler, int events)
+{
+	struct epoll_event ee;
+	int retval;
+	
+	ee.events = events;
+	ee.data.ptr = (void *)handler;
+	
+	retval = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, handler->fd, &ee);
+	if (retval == 0) handler->events = events;
+
+	return retval;
+}
+
+int EventManager::addConnection(Connection *connection, int events)
+{
+	if (addHandler(connection, events) < 0)
+		return -1;
+
+	/* init it */
+	gettimeofday(&connection->tsLastRead, NULL);
+
+	connections_arr[connection->fd] = connection;
+	_list_add_tail(&connection->lruEntry, &lruHead);
+
+	return 0;
+}
+
+int EventManager::modifyConnection(Connection *connection, int add, int remove)
+{
+	struct epoll_event ee;
+	int retval;
+
+	ee.events = (connection->events | add) & ~remove;
+	ee.data.ptr = (void *)(EventHandler *)connection;
+
+	retval = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, connection->fd, &ee);
+	return retval;
+}
+
+int EventManager::deleteConnection(Connection *connection)
+{
+	struct epoll_event ee;
+	int retval;
+
+	ee.events = 0;
+	ee.data.ptr = (void *)(EventHandler *)connection;
+
+	if (!(retval = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, connection->fd, &ee))) {
+		connections_arr[connection->fd] = NULL;
+		_list_del(&connection->lruEntry);
+	}
+	
+	return retval;
+}
+
+int EventManager::nextFlow() {
+	int flow = next_flow++;
+	return flow;
+}
+
+int EventManager::mapFlow(int flow, int fd)
+{
+	assert(flow2fdMap.find(flow) == flow2fdMap.end());
+	flow2fdMap.insert(std::pair<int, int>(flow, fd));
+
+	SYSLOG_DEBUG("mapFlow=%d => %d", flow, fd);
+	return 0;
+}
+
+int EventManager::updateFlow(int flow, int fd)
+{
+	assert(flow2fdMap.find(flow) != flow2fdMap.end());
+	SYSLOG_DEBUG("updateFlow=%d => %d (new=%d)", flow, flow2fdMap[flow], fd);
+	flow2fdMap[flow] = fd;
+
+	return 0;
+}
+
+int EventManager::unmapFlow(int flow)
+{
+	assert(flow2fdMap.find(flow) != flow2fdMap.end());
+	SYSLOG_DEBUG("upmapFlow=%d => %d", flow, flow2fdMap[flow]);
+	flow2fdMap.erase(flow);
+
+	return 0;
+}
+
+int EventManager::waitingEvents()
+{
+	// TODO: wtime = min(gap-to-next-timer, 10ms)
+	long wtime = 10; /* 1s */
+
+	event_next = event_total = 0;
+	int cnt = epoll_wait(epoll_fd, epoll_events, epoll_size, wtime);
+	if (cnt >= 0) event_total = cnt;
+
+	return cnt;
+}
+
+void EventManager::handleEvent(int fd, EventHandler *handler, int event)
+{
+	int retval = 0;
+
+	if ((event & EVENT_OUT) && (retval = handler->onWritable(fd)) < 0) {
+		SYSLOG_ERROR("fd=%d onWritable failed", handler->fd);
+	}
+
+	if (retval >= 0 && (event & EVENT_IN) && (retval = handler->onReadable(fd)) < 0) {
+		SYSLOG_ERROR("fd=%d onReadable failed", handler->fd);
+	}
+
+	if (retval < 0 || (event & EVENT_ERR)) {
+		SYSLOG_ERROR("fd=%d got retval=%d or ERR event=%d", fd, retval, event);
+		retval = handler->onError(fd);
+		// Note!!!
+		// handler is not available now
+	}
+
+	return;
+}
+
+void EventManager::handleEvents()
+{
+	for (event_next = 0; event_next < event_total; ++event_next) {
+		struct epoll_event *ee = &epoll_events[event_next];
+		EventHandler *handler = static_cast<EventHandler *>(ee->data.ptr);
+		handleEvent(handler->fd, handler, ee->events);
+	}
+
+	return;
+}
+
+Connection *EventManager::flow2Connection(int flow)
+{
+	std::map<int, int>::iterator iter = flow2fdMap.find(flow);
+	if (iter == flow2fdMap.end())
+		return NULL;
+
+	int fd = iter->second;
+	if (fd < 0 || fd >= connections_max)
+		return NULL;
+
+	return connections_arr[fd];
+}
+
+void EventManager::dispatchOutMessage()
+{
+	for (int i = 0; i < perCheckOutQueue; ++i) {
+		Message *msg = outQueue->pop();
+		if (msg == NULL)
+			break;
+
+		Connection *connection = flow2Connection(msg->flow);
+		if (connection == NULL) {
+			SYSLOG_ERROR("can not find connection for fd=%d flow=%d discard it", msg->fd, msg->flow);
+			// TODO: how to call proc-onSent(msg, SS_SOCKET_NON_EXIST)
+			Message::destroy(msg);
+			continue;
+		}
+		
+		int retval = connection->sendMessage(msg);
+		if (retval != 0) {
+			SYSLOG_ERROR("sendMessage to fd=%d flow=%d failed", connection->fd, msg->flow);
+
+			Message::destroy(msg);
+			continue;
+		}
+	}
+}
+
+void EventManager::checkTimeout()
+{
+	time_t tNow = time(NULL);
+	struct list_head *pl, *pn;
+
+	list_for_each_safe(pl, pn, &lruHead) {
+		Connection *connection = list_entry(pl, Connection, lruEntry);
+		if (tNow - connection->tsLastRead.tv_sec > connectionMaxIdle) {
+			SYSLOG_ERROR("connection(fd=%d, flow=%d) timed out. close it now.", connection->fd, connection->flow);
+			connection->onError(connection->fd);
+			continue;
+		}
+
+		// the rest should be more active
+		// so no need check
+		break;
+	}
+}
+
+int EventManager::start()
+{
+	/* start it */
+	isRunning = 1;
+
+	while (isRunning) {
+		waitingEvents();
+
+		handleEvents();
+
+		// check outQueue
+		dispatchOutMessage();
+
+		// timeout check
+		//checkTimeout();
+	}
+
+	return 0;
+}
+
+#if 0 //LEADER_THREADS
+int EventManager::start() {
+	pts = leader_threads_create(10, EventManager::LeaderEntry, this);
+}
+
+void EventManager::LeaderEntry(leader_threads_t *pts, void *data) {
+	EventManager *emgr = dynamic_cast<EventManager *>data;
+	emgr->leader();
+}
+
+int EventManager::leader() {
+
+	if (enext >= etotal) {
+		waitingForEvents();
+	}
+
+	while (enext < etotal) {
+		struct epoll_event *event = events[enext++];
+		int status = HandleEvent(ehandler, event.event);
+		if (status == NO_LEADER_ANY_MORE) {
+			/* return and need to be leader again */
+			return 0;
+		}
+	}			
+}
+#endif
+
+} /* Async */
+} /* beyondy */
+

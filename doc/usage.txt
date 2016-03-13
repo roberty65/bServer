@@ -1,0 +1,4 @@
+case 1: source code re-usage
+
+
+case 2: use the serverd framework, compile your plugin
