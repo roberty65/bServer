@@ -16,8 +16,7 @@
 #define ECHO_CMD_MORE_RSP	5
 
 using namespace beyondy::Async;
-
-extern "C" void appCallback(const char *p);
+extern "C" void appCallback(const char *);
 
 int Echo::onInit()
 {
@@ -34,7 +33,8 @@ int Echo::onInit()
 	maxOutputSize = 50 * 1024 * 1024;
 
 	// TODO: use more general log
-	SYSLOG_INIT("../logs/business.log", LOG_LEVEL_DEBUG, 10*1024*1024, 10);
+	// after compile the frame with -rdynamic, lib can use tis symbols
+	// SYSLOG_INIT("../logs/business.log", LOG_LEVEL_DEBUG, 10*1024*1024, 10);
 	return 0;
 }
 

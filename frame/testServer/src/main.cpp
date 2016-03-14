@@ -8,6 +8,11 @@
 
 using namespace beyondy::Async;
 
+extern "C" void appCallback(const char *s)
+{
+	fprintf(stdout, "%s\n", s);
+}
+
 int main(int argc, char **argv)
 {
 	SYSLOG_INIT("../logs/server.log", LOG_LEVEL_DEBUG, 1048576, 10);	
@@ -24,7 +29,7 @@ int main(int argc, char **argv)
 
 	beyondy::Async::EventManager *emgr = new beyondy::Async::EventManager(outQ, 1024);
 
-	retval = emgr->addListener("inet@localhost:5010/tcp", inQ, processor, 100);
+	retval = emgr->addListener("inet@0.0.0.0:5010/tcp", inQ, processor, 100);
 	if (retval < 0) {
 		SYSLOG_ERROR("addListener failed");
 		return 1;

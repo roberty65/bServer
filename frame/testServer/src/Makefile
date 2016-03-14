@@ -17,17 +17,21 @@ LDFLAGS  =
 DEST = ../bin/testServerd
 OBJS = main.o Echo.o 
 
-all: $(DEST)
+DST2 = ../bin/mtServer
+OBJ2 = mtServer.o
+
+all: $(DEST) $(DST2)
 
 $(DEST): $(OBJS)
-	g++ -o $@ $(OBJS) $(DEPS) $(LIB)
-
+	g++ -o $@ $(OBJS) $(LIB)
+$(DST2): $(OBJ2)
+	g++ -o $@ $(OBJ2) -L $(COM_LIB) -lcommon -lpthread
 .cpp.o:
 	g++ -fPIC -c -o $@ $(INC) $(CXXFLAGS) $<
 .c.o:
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 
 clean:
-	rm -f $(OBJS) *~ *.s *.ii *.i
+	rm -f $(OBJS) $(OBJ2) *~ *.s *.ii *.i
 distclean: clean
-	rm -f $(DEST) ../logs/server.log
+	rm -f $(DEST) $(DST2) ../logs/server.log

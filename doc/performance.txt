@@ -1,6 +1,27 @@
 1, without -O3, local vmare CentOS 7. Both testTraffic and bServerd run the vm.
 	send/recv 1K packages by 10 threads.
 	45MB/s
-2,  with -O3, same above env
+2, with -O3, same above env
 	53MB/s
-    by Roberty65 on Mar 12, 2012
+   by Roberty65 on Mar 12, 2012
+3, vmware player PC. 4GRAM, 4CPU. 
+   without -O3, debug log, 10 work threads, testTraffic with 10 threads
+   send   167504 16749.90pkg/s 17.15MB/s recv   167504 16749.90pkg/s 17.15MB/s
+   bServerd 106%CPU
+   testTraffic 15%CPU
+4, same as #3 but log=FATAL (no any log)
+   send   315874 31585.37pkg/s 32.34MB/s recv   315874 31585.37pkg/s 32.34MB/s
+   bServerd 70%CPU
+   testTraffic 22%CPU
+5, same as #3 but log=FATAL, work thread=2, testTraffic with 10 threads
+   send   503771 50375.06pkg/s 51.58MB/s recv   503771 50375.06pkg/s 51.58MB/s
+   bServerd 60%CPU
+   testTraffic 34%CPU
+6, same as #5, testTraffic has 50 threads
+   send   711565 71154.39pkg/s 72.86MB/s recv   711565 71154.39pkg/s 72.86MB/s
+   bServer 66%CPU
+   testTraffic 50%CPU 
+7, same env, testTraffic has 4 threads, mtServer
+   send  4324518 432436.53pkg/s 442.82MB/s recv  4324518 432436.53pkg/s 442.82MB/s
+   mtServer/testTraffic 200%CPU respectively
+

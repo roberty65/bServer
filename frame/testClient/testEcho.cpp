@@ -30,7 +30,7 @@ struct proto_h16_res : public proto_h16_head {
 
 static int sizes[] = { 0, 16, 64, 128, KK(1), KK(8), KK(64), KK(256), KK(512), MM(1), MM(4), MM(8), MM(10), MM(20) };
 static int scnt = (int)(sizeof(sizes)/sizeof(sizes[0]));
-static int cmd = 1;	// 0: echo, 1: forward
+static int cmd = 0;	// 0: echo, 3: forward
 static int tcnt = 10;
 
 static const char *host = "inet@127.0.0.1:5010/tcp";

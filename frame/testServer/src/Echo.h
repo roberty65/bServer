@@ -12,7 +12,7 @@
 
 class Echo : public beyondy::Async::Processor {
 public:
-	Echo() : beyondy::Async::Processor(), maxInputSize(1e9), maxOutputSize(1e9) {}
+	Echo() : beyondy::Async::Processor(), maxInputSize(2000000000), maxOutputSize(2000000000) {}
 public:
 	virtual size_t headerSize() const {
 		return sizeof (proto_h16_head);
@@ -37,6 +37,10 @@ public:
 
 	virtual int onMessage(beyondy::Async::Message *req);
 	virtual int onSent(beyondy::Async::Message *msg, int status);
+private:
+	int doEcho(beyondy::Async::Message *req);
+	int doForward(beyondy::Async::Message *req);
+	int doMore(beyondy::Async::Message *req);
 private:
 	size_t maxInputSize;
 	size_t maxOutputSize;

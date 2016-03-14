@@ -83,8 +83,12 @@ static void *worker(void *p)
 	int id = (int)(long)p;
 	char tag[128]; snprintf(tag, sizeof tag, "thread-%d", id);
 
-	char *reqbuf = new char[sizeof(struct proto_h16_head) + pkgSize];
-	char *rspbuf = new char[sizeof(struct proto_h16_res) + pkgSize];
+	size_t msize = sizeof(struct proto_h16_head) + pkgSize;
+	char *reqbuf = new char[msize];
+	char *rspbuf = new char[msize];
+
+	memset(reqbuf, 0, msize);
+	memset(rspbuf, 0, msize);
 
 	int fd = beyondy::XbsClient(host, O_NONBLOCK, 30000);
 	if (fd < 0) {

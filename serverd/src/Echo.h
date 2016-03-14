@@ -12,7 +12,7 @@
 
 class Echo : public beyondy::Async::Processor {
 public:
-	Echo() : beyondy::Async::Processor(), maxInputSize(1e9), maxOutputSize(1e9) {}
+	Echo() : beyondy::Async::Processor(), maxInputSize(2000000000), maxOutputSize(2000000000) {}
 public:
 	virtual size_t headerSize() const {
 		return sizeof (proto_h16_head);

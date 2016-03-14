@@ -181,9 +181,16 @@ extern "C" void appCallback(const char* s)
 }
 
 // must be called in Processor->onInit
-extern "C" int addConnector(const char *address, int openImmediately)
+extern "C" int addConnector(const char *name, const char *address, int openImmediately)
 {
+	// TODO:
+	return -1;
+}
 
+extern "C" int getConnector(const char *name)
+{
+	// TODO:
+	return -1;
 }
 
 int main(int argc, char **argv)
