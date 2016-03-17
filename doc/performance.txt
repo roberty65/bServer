@@ -110,7 +110,19 @@ set 8w #/s) 18,
 21,same as #20, disable bprof
     send  2352919 235265.01pkg/s 240.91MB/s recv        0 0.00pkg/s 0.00MB/s
      bServer 88%CPU
-22,same as #21, client run on another machine
+22,same as #21, client run on another machine. OS is Linux CentOS 2.6.18
     send  1797640 179733.80pkg/s 184.05MB/s recv        0 0.00pkg/s 0.00MB/s
-    bServer 99%CPU 
-
+    bServer 99%CPU  (why PC VM with 4CPU,4GRAM,i7-4790CPU/3.60GHZ can be 1000MB/s)
+23,same as #22, run PC VM, with bprof (no bprof is 1000MB/s) Linux ubuntu 3.19.0-25-generic
+    send  9330948 933077.35pkg/s 955.47MB/s recv        0 0.00pkg/s 0.00MB/s 
+    bServer 100%CPU
+                        mai-loop cnt=917283 total-usec=9982553 avg=10
+                  waiting events cnt=917283 total-usec=467191 avg=0
+                   handle events cnt=917283 total-usec=9368811 avg=10
+                dispatch outting cnt=917283 total-usec=31871 avg=0
+                 in handle event cnt=9172821 total-usec=9131247 avg=0
+                   check-timeout cnt=917283 total-usec=18497 avg=0
+                   conn-readable cnt=9172820 total-usec=8794003 avg=0
+                   conn-writable cnt=0 total-usec=0 avg=18446744073709551615
+               conn-send-message cnt=0 total-usec=0 avg=18446744073709551615
+                     conn-writeN cnt=0 total-usec=0 avg=18446744073709551615
