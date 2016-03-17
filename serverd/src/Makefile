@@ -11,7 +11,7 @@ FRM_SRC=../../frame/main/
 INC = -I $(COM_INC) -I $(FSH_INC) -I $(FRM_SRC)
 LIB = -L $(FRM_SRC) -lFrame -L $(FSH_LIB) -lProcessor -L $(COM_LIB) -lcommon -ldl -lpthread
 
-CXXFLAGS = -Wall -g -fPIC #-O3
+CXXFLAGS = -Wall -g -fPIC -O3 -DNOBPROF
 LDFLAGS  =
 
 DEST = ../bin/bServerd
@@ -30,7 +30,7 @@ $(LIBO): $(OBJ2)
 	g++ -o $@ -shared $(LDFLAGS) $(OBJ2) #-ldl
 
 .cpp.o:
-	g++ -fPIC -c -o $@ $(INC) $(CXXFLAGS) $<
+	g++ -c -o $@ $(INC) $(CXXFLAGS) $<
 .c.o:
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 

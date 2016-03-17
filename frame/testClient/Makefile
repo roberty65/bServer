@@ -11,7 +11,7 @@ FRM_SRC=../main/
 INC = -I $(COM_INC) -I $(FSH_INC) -I $(FRM_SRC)
 LIB =  -L $(COM_LIB) -lcommon -lpthread
 
-CXXFLAGS = -Wall -g -fPIC #-O3
+CXXFLAGS = -Wall -g -fPIC -O3
 LDFLAGS  =
 
 DEST = ./testEcho
@@ -33,7 +33,7 @@ $(DST3): $(OBJ3)
 	g++ -o $@ $(LDFLAGS) $(OBJ3) $(DEPS) $(LIB)
 
 .cpp.o:
-	g++ -fPIC -c -o $@ $(INC) $(CXXFLAGS) $<
+	g++ -c -o $@ $(INC) $(CXXFLAGS) $<
 .c.o:
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 

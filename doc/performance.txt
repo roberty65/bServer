@@ -53,3 +53,64 @@
     send   825406 82538.61pkg/s 84.52MB/s recv   825406 82538.61pkg/s 84.52MB/s
     bServerd 70%CPU
     testTraffic 70%CPU
+17,server@4CPU,24GRAM, 2threads, no -O3. clients 50 threads, pkg-size=1024
+    send   443979 44390.15pkg/s 45.46MB/s recv   443980 44390.25pkg/s 45.46MB/s
+    bServerd 126%CPU (if client run local machine, similar result, redis can
+set 8w #/s) 18,
+                        mai-loop cnt=19741 total-usec=10000146 avg=506
+             call waiting events cnt=19741 total-usec=303719 avg=15
+              call handle events cnt=19742 total-usec=5798140 avg=293
+           call dispatch outting cnt=19741 total-usec=3889624 avg=197
+                in handle events cnt=19742 total-usec=5792077 avg=293
+             in dispatch outting cnt=19741 total-usec=3883913 avg=196
+                 in handle event cnt=438431 total-usec=5682433 avg=12
+                   conn-readable cnt=438431 total-usec=5581717 avg=12
+                   conn-writable cnt=0 total-usec=0 avg=18446744073709551615
+               conn-send-message cnt=438424 total-usec=3605385 avg=8
+                     conn-writeN cnt=438424 total-usec=3279422 avg=7
+18,same as #17, with -O3
+   send   466260 46621.76pkg/s 47.74MB/s recv   466260 46621.76pkg/s 47.74MB/s 
+   bServer 121%CPU
+                        mai-loop cnt=24751 total-usec=9999336 avg=403
+                  waiting events cnt=24752 total-usec=358880 avg=14
+                   handle events cnt=24751 total-usec=5560524 avg=224
+                dispatch outting cnt=24751 total-usec=4057535 avg=163
+                 in handle event cnt=477531 total-usec=5480302 avg=11
+                   check-timeout cnt=24751 total-usec=3465 avg=0
+                   conn-readable cnt=477531 total-usec=5383330 avg=11
+                   conn-writable cnt=0 total-usec=0 avg=18446744073709551615
+               conn-send-message cnt=477514 total-usec=3859881 avg=8
+                     conn-writeN cnt=477514 total-usec=3551959 avg=7
+19,same as #18. server discard inMsg and client do not receive
+    send  1659228 165895.28pkg/s 169.88MB/s recv        0 0.00pkg/s 0.00MB/s
+    bServer 98%CPU
+                        mai-loop cnt=26495 total-usec=9999399 avg=377
+                  waiting events cnt=26495 total-usec=373163 avg=14
+                   handle events cnt=26495 total-usec=9595310 avg=362
+                dispatch outting cnt=26495 total-usec=8728 avg=0
+                 in handle event cnt=1323695 total-usec=9407530 avg=7
+                   check-timeout cnt=26495 total-usec=3187 avg=0
+                   conn-readable cnt=1323695 total-usec=9130079 avg=6
+                   conn-writable cnt=0 total-usec=0 avg=18446744073709551615
+               conn-send-message cnt=0 total-usec=0 avg=18446744073709551615
+                     conn-writeN cnt=0 total-usec=0 avg=18446744073709551615
+20,same as #19, client run on the same machine
+    send  2275393 227489.53pkg/s 232.95MB/s recv        0 0.00pkg/s 0.00MB/s
+    bServer 98%CPU
+                        mai-loop cnt=72724 total-usec=9995315 avg=137
+                  waiting events cnt=72724 total-usec=496816 avg=6
+                   handle events cnt=72724 total-usec=9440153 avg=129
+                dispatch outting cnt=72724 total-usec=13732 avg=0
+                 in handle event cnt=2181723 total-usec=9219512 avg=4
+                   check-timeout cnt=72724 total-usec=6569 avg=0
+                   conn-readable cnt=2181723 total-usec=8878662 avg=4
+                   conn-writable cnt=0 total-usec=0 avg=18446744073709551615
+               conn-send-message cnt=0 total-usec=0 avg=18446744073709551615
+                     conn-writeN cnt=0 total-usec=0 avg=18446744073709551615
+21,same as #20, disable bprof
+    send  2352919 235265.01pkg/s 240.91MB/s recv        0 0.00pkg/s 0.00MB/s
+     bServer 88%CPU
+22,same as #21, client run on another machine
+    send  1797640 179733.80pkg/s 184.05MB/s recv        0 0.00pkg/s 0.00MB/s
+    bServer 99%CPU 
+

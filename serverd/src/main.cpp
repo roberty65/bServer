@@ -7,6 +7,8 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include "beyondy/bprof.h"
+#include "Bprof_ids.h"
 #include "Message.h"
 #include "Queue.h"
 #include "Processor.h"
@@ -193,6 +195,20 @@ extern "C" int getConnector(const char *name)
 	return -1;
 }
 
+beyondy::bprof_item items[] = {
+	{ BPT_LOOP, "mai-loop", 0, 0 },
+	{ BPT_EM_WAITING, "waiting events", 0, 0 },
+	{ BPT_EM_HEVENTS, "handle events", 0, 0 },
+	{ BPT_EM_DISPATCH, "dispatch outting", 0, 0 },
+	{ BPT_EM_HEVENT, "in handle event", 0, 0 },
+	{ BPT_EM_CHKTIMEOUT, "check-timeout", 0, 0 },
+	{ BPT_CONN_READABLE, "conn-readable", 0, 0 },
+	{ BPT_CONN_WRITABLE, "conn-writable", 0, 0 },
+	{ BPT_CONN_SENDMESSAGE, "conn-send-message", 0, 0 },
+	{ BPT_CONN_WRITEN, "conn-writeN", 0, 0 },
+	{ -1, NULL, 0, 0 }
+};
+
 int main(int argc, char **argv)
 {
 	const char *etcFile = "../conf/server.conf";
@@ -220,7 +236,6 @@ int main(int argc, char **argv)
 		}	
 	}
 
-	
 	if (loadConfig(etcFile) < 0) {
 		fprintf(stderr, "load config from %s failed: %m\n", etcFile);
 		exit(1);
@@ -252,6 +267,11 @@ int main(int argc, char **argv)
 		//Processor *processor = loadProcessor(businessProcessor);
 		// TODO:
 		exit(0);
+	}
+
+	if (BPROF_INIT(items, sizeof(items)/sizeof(items[0])-1) < 0) {
+		fprintf(stderr, "bprof-init failed: %m\n");
+		exit(1);
 	}
 
 	SYSLOG_INIT(logFileName, logLevel, logFileMaxSize, logMaxBackup);

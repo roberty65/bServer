@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "beyondy/bprof.h"
+#include "Bprof_ids.h"
 #include "Processor.h"
 #include "Block.h"
 #include "Message.h"
@@ -30,7 +32,10 @@ Connection::Connection(int _fd, int _flow, EventManager *_emgr, Queue<Message> *
 		this->parentData = _parent;
 }
 
-int Connection::onReadable(int fd) {
+int Connection::onReadable(int fd)
+{
+	BPROF_TRACE(BPT_CONN_READABLE)
+
 	assert(this->fd == fd);
 	SYSLOG_DEBUG("connection fd=%d flow=%d onReadable", fd, flow);
 
@@ -104,6 +109,8 @@ int Connection::onReadable(int fd) {
 
 int Connection::onWritable(int fd) 
 {
+	BPROF_TRACE(BPT_CONN_WRITABLE)
+
 	assert(this->fd == fd);
 	SYSLOG_DEBUG("connection fd=%d flow=%d onWritable", fd, flow);
 
@@ -152,6 +159,7 @@ int Connection::onError(int fd) {
 
 int Connection::sendMessage(Message *msg) 
 {
+	BPROF_TRACE(BPT_CONN_SENDMESSAGE)
 	if (outMsg == NULL && outQueue->empty()) {
 		/* send out directly as can as possible */
 		size_t rest = msg->wptr - msg->rptr;
@@ -237,6 +245,8 @@ ssize_t Connection::readN(size_t size)
 
 ssize_t Connection::writeN(Message *msg, size_t size) 
 {
+	BPROF_TRACE(BPT_CONN_WRITEN)
+
 	assert(size > 0);
 	ssize_t wlen = ::write(fd, msg->data() + msg->rptr, size);
 

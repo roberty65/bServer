@@ -8,6 +8,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "beyondy/bprof.h"
+#include "Bprof_ids.h"
 #include "Queue.h"
 #include "Listener.h"
 #include "Connection.h"
@@ -230,6 +232,7 @@ int EventManager::unmapFlow(Connection *connection)
 
 int EventManager::waitingEvents()
 {
+	BPROF_TRACE(BPT_EM_WAITING)
 	// TODO: wtime = min(gap-to-next-timer, 10ms)
 	long wtime = 10; /* 1s */
 
@@ -242,6 +245,7 @@ int EventManager::waitingEvents()
 
 void EventManager::handleEvent(int fd, EventHandler *handler, int event)
 {
+	BPROF_TRACE(BPT_EM_HEVENT)
 	int retval = 0;
 
 	if ((event & EVENT_OUT) && (retval = handler->onWritable(fd)) < 0) {
@@ -264,6 +268,8 @@ void EventManager::handleEvent(int fd, EventHandler *handler, int event)
 
 void EventManager::handleEvents()
 {
+	BPROF_TRACE(BPT_EM_HEVENTS)
+
 	for (event_next = 0; event_next < event_total; ++event_next) {
 		struct epoll_event *ee = &epoll_events[event_next];
 		EventHandler *handler = static_cast<EventHandler *>(ee->data.ptr);
@@ -275,6 +281,8 @@ void EventManager::handleEvents()
 
 void EventManager::dispatchOutMessage()
 {
+	BPROF_TRACE(BPT_EM_DISPATCH)
+
 	for (int i = 0; i < perCheckOutQueue; ++i) {
 		Message *msg = outQueue->pop();
 		if (msg == NULL)
@@ -300,6 +308,7 @@ void EventManager::dispatchOutMessage()
 
 void EventManager::checkTimeout()
 {
+	BPROF_TRACE(BPT_EM_CHKTIMEOUT)
 	time_t tNow = time(NULL);
 	struct list_head *pl, *pn;
 
@@ -323,6 +332,8 @@ int EventManager::start()
 	isRunning = 1;
 
 	while (isRunning) {
+		BPROF_TRACE(BPT_LOOP)
+
 		waitingEvents();
 
 		handleEvents();
@@ -331,7 +342,7 @@ int EventManager::start()
 		dispatchOutMessage();
 
 		// timeout check
-		//checkTimeout();
+		checkTimeout();
 	}
 
 	return 0;
