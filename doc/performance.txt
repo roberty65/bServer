@@ -24,4 +24,32 @@
 7, same env, testTraffic has 4 threads, mtServer
    send  4324518 432436.53pkg/s 442.82MB/s recv  4324518 432436.53pkg/s 442.82MB/s
    mtServer/testTraffic 200%CPU respectively
-
+8, same as #5 but bServer will discard the message when it receives done
+   testTraffic just send message.
+   send 10169275 1016882.25pkg/s 1041.29MB/s recv 10169275 1016882.25pkg/s 1041.29MB/s
+   bServer 99%CPU, testTraffic 70%CPU
+9, same as #5, connection sendMessage received msg directly
+   send   828388 82837.39pkg/s 84.83MB/s recv   828388 82837.39pkg/s 84.83MB/s
+   bServer/testTraffic  90%CPU
+10,same as #9, but pkg-size=10K
+   send   658049 65802.92pkg/s 673.82MB/s recv   658049 65802.92pkg/s 673.82MB/s
+   bServer/testTraffic 75%CPU
+11,same as #9, pkg-size=128
+   send   845388 84536.68pkg/s 10.82MB/s recv   845388 84536.68pkg/s 10.82MB/s
+   bServer/testTraffic 90%CPU
+12,same as #9, but Connection's outQueue use std::dequeue(no lock) @3/16/2012
+   send   823348 82333.24pkg/s 84.31MB/s recv   823349 82333.34pkg/s 84.31MB/s 
+   bServer/testTraffic 85~90%CPU respectively
+13,same as #12, but use std::tr1::unordered_map for flow-Connection mapping
+   send   778970 77895.53pkg/s 79.77MB/s recv   778970 77895.53pkg/s 79.77MB/s
+   bServerd/testTraffic 80%CPU
+14,same as #13, but set fd NONBLOCK.
+   send   735978 73596.58pkg/s 75.36MB/s recv   735978 73596.58pkg/s 75.36MB/s
+   bServerd/testTraffic 85%CPU
+15,same as #14, but discard the received message immediately (as #8)
+    send 10080831 1008044.19pkg/s 1032.24MB/s recv 10080831 1008044.19pkg/s 1032.24MB/s
+    bServerd 100%CPU, testTraffic 70%CPU
+16,same as #15, but write the fd by the incoming message as can as possible
+    send   825406 82538.61pkg/s 84.52MB/s recv   825406 82538.61pkg/s 84.52MB/s
+    bServerd 70%CPU
+    testTraffic 70%CPU

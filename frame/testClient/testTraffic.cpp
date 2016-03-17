@@ -55,10 +55,15 @@ static int __send_req(int fd, int cmd, char *reqbuf, int size, const char *tag)
 //		*(int *)(reqbuf + sizeof *h) = random() % 3000;
 //	}	
 
-	ssize_t wlen = beyondy::XbsWriteN(fd, reqbuf, msize, timeout);
-	if (wlen != msize) {
-		fprintf(stdout, "FAIL: %s pkg-size=%d, write req failed: %m\n", tag, size);
-		return -1;	
+	while (true) {
+		ssize_t wlen = beyondy::XbsWriteN(fd, reqbuf, msize, timeout);
+		if (wlen < 0 && errno == EINTR) continue;
+		if (wlen != msize) {
+			fprintf(stdout, "FAIL: %s pkg-size=%d, write req failed: %m\n", tag, size);
+			return -1;	
+		}
+
+		break;
 	}
 
 	return 0;
@@ -66,12 +71,16 @@ static int __send_req(int fd, int cmd, char *reqbuf, int size, const char *tag)
 
 static int __read_rsp(int fd, char *rspbuf, int size, const char *tag)
 {
-	int msize = size + sizeof(struct proto_h16_head);
-	ssize_t rlen = beyondy::XbsReadN(fd, rspbuf, msize, timeout);
+	while (true) {
+		int msize = size + sizeof(struct proto_h16_head);
+		ssize_t rlen = beyondy::XbsReadN(fd, rspbuf, msize, timeout);
 
-	if (rlen != msize) {
-		fprintf(stdout, "FAIL: %s pkg-size=%d, read rsp failed: %m\n", tag, msize);
-		return -1;	
+		if (rlen != msize) {
+			fprintf(stdout, "FAIL: %s pkg-size=%d, read rsp failed: %m\n", tag, msize);
+			return -1;	
+		}
+
+		break;
 	}
 
 	return 0;

@@ -20,7 +20,7 @@ namespace Async {
 Connection::Connection(int _fd, int _flow, EventManager *_emgr, Queue<Message> *_inQueue, Processor *_proc, int _creatorType, void *_parent)
 	: EventHandler(_fd), flow(_flow),
 	  inMsg(NULL), inQueue(_inQueue),
-	  outMsg(NULL), outQueue(new Queue<Message>(16)),
+	  outMsg(NULL), outQueue(new std::deque<Message*>()),
 	  emgr(_emgr), proc(_proc),
 	  creatorType(_creatorType)
 {
@@ -108,12 +108,14 @@ int Connection::onWritable(int fd)
 	SYSLOG_DEBUG("connection fd=%d flow=%d onWritable", fd, flow);
 
 	if (outMsg == NULL) {
-		outMsg = outQueue->pop();
-		if (outMsg == NULL) {
+		if (outQueue->empty()) {
 			/* do not watch OUT event for it */
 			emgr->modifyConnection(this, 0, EVENT_OUT);
 			return 0;
 		}
+
+		outMsg = outQueue->front();
+		outQueue->pop_front();
 
 		SYSLOG_DEBUG("connection fd=%d flow=%d start to send out msg(len=%ld)", fd, flow, (long)outMsg->wptr);
 	}
@@ -150,7 +152,7 @@ int Connection::onError(int fd) {
 
 int Connection::sendMessage(Message *msg) 
 {
-	if (outMsg == NULL && outQueue->isEmpty()) {
+	if (outMsg == NULL && outQueue->empty()) {
 		/* send out directly as can as possible */
 		size_t rest = msg->wptr - msg->rptr;
 		ssize_t wlen = writeN(msg, rest);
@@ -174,11 +176,11 @@ int Connection::sendMessage(Message *msg)
 		return -1;
 	}
 
-	if (outQueue->push(msg) < 0) {
+	outQueue->push_back(msg); /*{
 		SYSLOG_ERROR("connection fd=%d flow=%d sendMessge en-outQueue failed", fd, flow);
 		proc->onSent(msg, SS_QUEUE_FULL);
 		return -1;
-	}
+	} */
 
 	SYSLOG_ERROR("connection fd=%d flow=%d sendMessge en-outQueue OK", fd, flow);
 	return 0;
@@ -196,7 +198,8 @@ int Connection::destroy() {
 		outMsg = NULL;
 	}
 
-	while ((outMsg = outQueue->pop()) != NULL) {
+	while (!outQueue->empty()) {
+		outMsg = outQueue->front(); outQueue->pop_front();
 		proc->onSent(outMsg, SS_DESTROY);
 	}
 	

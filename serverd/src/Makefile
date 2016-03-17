@@ -23,11 +23,11 @@ OBJ2 = Echo.o $(FRM_SRC)Log.o $(FSH_SRC)Message.o $(FSH_SRC)Block.o
 all: $(DEST) $(LIBO)
 
 $(DEST): $(OBJS)
-	g++ -o $@ -rdynamic $(OBJS) $(DEPS) $(LIB)
+	g++ -o $@ -rdynamic $(LDFLAGS) $(OBJS) $(DEPS) $(LIB)
 	#g++ -o $@ $(OBJS) $(DEPS) $(LIB) #-Wl,--dynamic-list=export.syms
 
 $(LIBO): $(OBJ2)
-	g++ -o $@ -shared $(OBJ2) #-ldl
+	g++ -o $@ -shared $(LDFLAGS) $(OBJ2) #-ldl
 
 .cpp.o:
 	g++ -fPIC -c -o $@ $(INC) $(CXXFLAGS) $<

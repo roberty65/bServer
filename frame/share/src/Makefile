@@ -2,7 +2,7 @@
 INC = -I ../../common/include -I ../include
 LIB = -lpthread
 
-CXXFLAGS = -Wall -g -fPIC -O3
+CXXFLAGS = -Wall -g -fPIC #-O3
 LDFLAGS  =
 
 OBJS = Block.o Message.o

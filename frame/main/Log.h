@@ -22,7 +22,7 @@ public:
 	LogHandle(const char *basePath, int logLevel, long maxFileSize, long maxBackup);
 	~LogHandle();
 public:
-	int isEnabled(int level) { if (level > logLevel) return 0; return 1; }
+	int isEnabled(int level) const { if (level > logLevel) return 0; return 1; }
 	int doLog(int level, const char *fmt...);
 private:
 	int logLevel;

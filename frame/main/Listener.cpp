@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
 
@@ -42,6 +43,7 @@ int Listener::onReadable(int fd) {
 		return 0; /* ignore (this is usually caused by peer closed immediately */
 	}
 
+	beyondy::XbsSetFlags(cfd, O_NONBLOCK, 0);
 	if (connActive >= connMax) {
 		::close(fd);
 		SYSLOG_ERROR("listener(%s) reject connection from %s for overflow limit %d", address, peerName, connActive);
@@ -100,7 +102,7 @@ void Listener::destroyConnection(Connection *connection)
 
 int Listener::open()
 {
-	fd = XbsServer(address, 1024);
+	fd = XbsServer(address, 1024, O_NONBLOCK);
 	if (fd < 0) {
 		SYSLOG_ERROR("listener(%s) open failed: %m", address);
 		return -1;

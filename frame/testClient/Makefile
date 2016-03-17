@@ -11,7 +11,7 @@ FRM_SRC=../main/
 INC = -I $(COM_INC) -I $(FSH_INC) -I $(FRM_SRC)
 LIB =  -L $(COM_LIB) -lcommon -lpthread
 
-CXXFLAGS = -Wall -g -fPIC -O3
+CXXFLAGS = -Wall -g -fPIC #-O3
 LDFLAGS  =
 
 DEST = ./testEcho
@@ -26,11 +26,11 @@ OBJ3 = testForward.o
 all: $(DEST) $(DST2) $(DST3)
 
 $(DEST): $(OBJS)
-	g++ -o $@ $(OBJS) $(DEPS) $(LIB)
+	g++ -o $@ $(LDFLAGS) $(OBJS) $(DEPS) $(LIB)
 $(DST2): $(OBJ2)
-	g++ -o $@ $(OBJ2) $(DEPS) $(LIB)
+	g++ -o $@ $(LDFLAGS) $(OBJ2) $(DEPS) $(LIB)
 $(DST3): $(OBJ3)
-	g++ -o $@ $(OBJ3) $(DEPS) $(LIB)
+	g++ -o $@ $(LDFLAGS) $(OBJ3) $(DEPS) $(LIB)
 
 .cpp.o:
 	g++ -fPIC -c -o $@ $(INC) $(CXXFLAGS) $<

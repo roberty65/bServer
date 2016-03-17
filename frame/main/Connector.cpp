@@ -93,7 +93,7 @@ int Connector::destroy()
 
 	if (outMsg != NULL) {
 		// TODO: push back to the top!!!
-		outQueue->push(outMsg);
+		outQueue->push_front(outMsg);
 		outMsg = NULL;
 	}
 
@@ -122,7 +122,7 @@ int Connector::sendMessage(Message *msg)
 
 	if (status == CONN_OPENNING) {
 		SYSLOG_DEBUG("connector(%s) is openning when sendMessage", address);
-		outQueue->push(msg);
+		outQueue->push_back(msg);
 		return 0;
 	}
 

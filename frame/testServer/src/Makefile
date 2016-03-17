@@ -11,7 +11,7 @@ FRM_SRC=../../main/
 INC = -I $(COM_INC) -I $(FSH_INC) -I $(FRM_SRC)
 LIB = -L $(FRM_SRC) -lFrame -L $(FSH_LIB) -lProcessor -L $(COM_LIB) -lcommon -lpthread
 
-CXXFLAGS = -Wall -g -fPIC -O3
+CXXFLAGS = -Wall -g -fPIC #-O3
 LDFLAGS  =
 
 DEST = ../bin/testServerd
@@ -23,9 +23,9 @@ OBJ2 = mtServer.o
 all: $(DEST) $(DST2)
 
 $(DEST): $(OBJS)
-	g++ -o $@ $(OBJS) $(LIB)
+	g++ -o $@ $(LDFLAGS) $(OBJS) $(LIB)
 $(DST2): $(OBJ2)
-	g++ -o $@ $(OBJ2) -L $(COM_LIB) -lcommon -lpthread
+	g++ -o $@ $(OBJ2) $(LDFLAGS) -L $(COM_LIB) -lcommon -lpthread
 .cpp.o:
 	g++ -fPIC -c -o $@ $(INC) $(CXXFLAGS) $<
 .c.o:

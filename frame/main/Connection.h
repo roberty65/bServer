@@ -1,6 +1,7 @@
 #ifndef __CONNECTION__H
 #define __CONNECTION__H
 
+#include <deque>
 #include "EventHandler.h"
 #include "beyondy/list.h"
 #include "beyondy/rbtree.h"
@@ -42,7 +43,7 @@ protected:
 	Queue<Message> *inQueue;	// shared
 
 	Message *outMsg;
-	Queue<Message> *outQueue;	// delicated for out messages(NO NEED LOCK?)
+	std::deque<Message*> *outQueue;	// delicated for out messages(NO NEED LOCK?)
 
 	EventManager *emgr;
 	Processor *proc;
