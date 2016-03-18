@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <assert.h>
 
 #include "beyondy/bprof.h"
 
@@ -58,7 +59,9 @@ static void *bprof_outer(void *p)
 			fprintf(stderr, "%s\n", ff_buf);
 		}
 		else {
-			write(fd, ff_buf, offset);
+			ssize_t wlen = write(fd, ff_buf, offset);
+			assert(wlen == offset);
+
 			close(fd);
 		}
 

@@ -288,7 +288,8 @@ void EventManager::dispatchOutMessage()
 		if (msg == NULL)
 			break;
 
-		Connection *connection = flow2Connection(msg->flow);
+		int flow = msg->flow;
+		Connection *connection = flow2Connection(flow);
 		if (connection == NULL) {
 			SYSLOG_ERROR("can not find connection for fd=%d flow=%d discard it", msg->fd, msg->flow);
 			// TODO: how to call proc-onSent(msg, SS_SOCKET_NON_EXIST)
@@ -298,9 +299,8 @@ void EventManager::dispatchOutMessage()
 		
 		int retval = connection->sendMessage(msg);
 		if (retval != 0) {
-			SYSLOG_ERROR("sendMessage to fd=%d flow=%d failed", connection->fd, msg->flow);
-
-			Message::destroy(msg);
+			// msg has been freed
+			SYSLOG_ERROR("sendMessage to fd=%d flow=%d failed", connection->fd, flow);
 			continue;
 		}
 	}

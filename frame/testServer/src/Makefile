@@ -20,18 +20,26 @@ OBJS = main.o Echo.o
 DST2 = ../bin/mtServer
 OBJ2 = mtServer.o
 
-all: $(DEST) $(DST2)
+DST3 = ../bin/otEchod
+OBJ3 = otEchod.o
+
+all: $(DEST) $(DST2) $(DST3)
 
 $(DEST): $(OBJS)
+	mkdir -p ../bin
 	g++ -o $@ $(LDFLAGS) $(OBJS) $(LIB)
 $(DST2): $(OBJ2)
+	mkdir -p ../bin
 	g++ -o $@ $(OBJ2) $(LDFLAGS) -L $(COM_LIB) -lcommon -lpthread
+$(DST3): $(OBJ3)
+	mkdir -p ../bin
+	g++ -o $@ $(OBJ3) $(LDFLAGS) -L $(COM_LIB) -lcommon
 .cpp.o:
 	g++ -c -o $@ $(INC) $(CXXFLAGS) $<
 .c.o:
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 
 clean:
-	rm -f $(OBJS) $(OBJ2) *~ *.s *.ii *.i
+	rm -f $(OBJS) $(OBJ2) $(OBJ3) *~ *.s *.ii *.i
 distclean: clean
-	rm -f $(DEST) $(DST2) ../logs/server.log
+	rm -f $(DEST) $(DST2) $(DST3) ../logs/server.log

@@ -6,6 +6,7 @@
 #include <dlfcn.h>
 #include <ctype.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "beyondy/bprof.h"
 #include "Bprof_ids.h"
@@ -242,7 +243,8 @@ int main(int argc, char **argv)
 	}
 
 	if (daemonMode) {
-		daemon(1, 1);
+		int retval = daemon(1, 1);
+		assert(retval == 0);
 
 		if (fork() != 0) exit(0); // exit if not child
 		setsid();

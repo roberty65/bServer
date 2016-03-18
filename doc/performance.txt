@@ -126,3 +126,15 @@ set 8w #/s) 18,
                    conn-writable cnt=0 total-usec=0 avg=18446744073709551615
                conn-send-message cnt=0 total-usec=0 avg=18446744073709551615
                      conn-writeN cnt=0 total-usec=0 avg=18446744073709551615
+24,test on PC VM(4CPU,4GRAM) otEchod. testTraffic with 5 thread
+    send 10830723 1083054.65pkg/s 1109.05MB/s recv 10830744 1083056.75pkg/s 1109.05MB/s
+    otEchod 65%CPU testTraffic 185%CPU
+25,test on PC VM(4CPU,4GRAM) mtServer. testTraffic with 10 threads
+    send  5208343 520815.76pkg/s 533.32MB/s recv  5208166 520798.06pkg/s 533.30MB/s
+    mtServer/testTraffic 200%CPU respectively
+26,test on PC VM(4CPU,4GRAM) bServerd. FATAL-level, testBenchmark(old testTraffic) with 10 threads async-req-rsp mode
+    send  1005039 100502.72pkg/s 102.91MB/s recv  1005221 100520.92pkg/s 102.93MB/s
+    bServerd 170%CPU, testBenchmark 25%
+27,same as #26. ERROR-level
+    send   710870 71085.42pkg/s 72.79MB/s recv   711150 71113.42pkg/s 72.82MB/s
+    bServer 147%CPU, testBenchmark 20%

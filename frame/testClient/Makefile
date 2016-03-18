@@ -17,8 +17,8 @@ LDFLAGS  =
 DEST = ./testEcho
 OBJS = testEcho.o
 
-DST2 = ./testTraffic
-OBJ2 = testTraffic.o
+DST2 = ./testBenchmark
+OBJ2 = testBenchmark.o
 
 DST3 = ./testForward
 OBJ3 = testForward.o

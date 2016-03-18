@@ -23,10 +23,12 @@ OBJ2 = Echo.o $(FRM_SRC)Log.o $(FSH_SRC)Message.o $(FSH_SRC)Block.o
 all: $(DEST) $(LIBO)
 
 $(DEST): $(OBJS)
+	mkdir -p ../bin
 	g++ -o $@ -rdynamic $(LDFLAGS) $(OBJS) $(DEPS) $(LIB)
 	#g++ -o $@ $(OBJS) $(DEPS) $(LIB) #-Wl,--dynamic-list=export.syms
 
 $(LIBO): $(OBJ2)
+	mkdir -p ../lib
 	g++ -o $@ -shared $(LDFLAGS) $(OBJ2) #-ldl
 
 .cpp.o:

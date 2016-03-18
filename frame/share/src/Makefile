@@ -11,6 +11,7 @@ DEST = ../lib/libProcessor.a
 all: $(DEST)
 
 $(DEST): $(OBJS)
+	mkdir -p ../lib
 	ar cru $@ $(OBJS)
 
 .cpp.o:

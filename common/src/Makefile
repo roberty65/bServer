@@ -14,6 +14,7 @@ OBJS = xbs_naddr.o xbs_io.o xbs_socket.o nam2val.o md5.o \
 all: $(DEST)
 
 $(DEST): $(OBJS)
+	mkdir -p ../lib
 	ar cru $@ $(OBJS)
 
 .cpp.o:

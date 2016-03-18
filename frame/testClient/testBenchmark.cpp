@@ -34,11 +34,11 @@ static int cmd = 1;	// 0: echo, 1: forward
 static int tcnt = 10;
 static int pkgSize = 1024;
 
-static volatile long *countSend = NULL;
-static volatile long *countRecv = NULL;
+static volatile long *pkgSent = NULL, *byteSent = NULL;
+static volatile long *pkgRspd = NULL, *byteRspd = NULL;
 
 static const char *host = "inet@127.0.0.1:5010/tcp";
-static int timeout = 30000;
+static int timeout = 10000;
 
 static int __send_req(int fd, int cmd, char *reqbuf, int size, const char *tag)
 {
@@ -50,10 +50,6 @@ static int __send_req(int fd, int cmd, char *reqbuf, int size, const char *tag)
 	h->ver = 1;
 	h->syn = 2;
 	h->ack = 3;
-
-//	if (size >= (int)sizeof(int)) {
-//		*(int *)(reqbuf + sizeof *h) = random() % 3000;
-//	}	
 
 	while (true) {
 		ssize_t wlen = beyondy::XbsWriteN(fd, reqbuf, msize, timeout);
@@ -86,8 +82,7 @@ static int __read_rsp(int fd, char *rspbuf, int size, const char *tag)
 	return 0;
 }
 
-
-static void *worker(void *p)
+static void *async_worker(void *p)
 {
 	int id = (int)(long)p;
 	char tag[128]; snprintf(tag, sizeof tag, "thread-%d", id);
@@ -99,25 +94,88 @@ static void *worker(void *p)
 	memset(reqbuf, 0, msize);
 	memset(rspbuf, 0, msize);
 
-	int fd = beyondy::XbsClient(host, O_NONBLOCK, 30000);
-	if (fd < 0) {
-		fprintf(stdout, "%s connect failed: %m\n", tag);
-		exit(1);
+	int fd = -1;
+	while (true) {	
+ 		if (fd < 0) {
+			fd = beyondy::XbsClient(host, O_NONBLOCK, timeout);
+			if (fd < 0) {
+				fprintf(stdout, "%s connect failed: %m\n", tag);
+				continue;	
+			}
+		}
+
+		int events = beyondy::XbsWaitPollable(fd, POLLIN|POLLOUT, 10);
+		if (events == -1) continue;
+
+		if (events & POLLOUT) {
+			if (__send_req(fd, cmd, reqbuf, pkgSize, tag) < 0) {
+				fprintf(stdout, "%s send req failed: %m\n", tag);
+				close(fd); fd = -1;
+				continue;
+			}
+
+			++pkgSent[id];
+			byteSent[id] += pkgSize;
+		}
+
+		if (events & POLLIN) {
+			if (__read_rsp(fd, rspbuf, pkgSize, tag) < 0) {
+				fprintf(stdout, "%s send req failed: %m\n", tag);
+				close(fd); fd = -1;
+				continue;
+			}
+
+			++pkgRspd[id];
+			byteRspd[id] += pkgSize;
+		}
 	}
 
+	return NULL;
+
+}
+
+static void *sync_worker(void *p)
+{
+	int id = (int)(long)p;
+	char tag[128]; snprintf(tag, sizeof tag, "thread-%d", id);
+
+	size_t msize = sizeof(struct proto_h16_head) + pkgSize;
+	char *reqbuf = new char[msize];
+	char *rspbuf = new char[msize];
+
+	memset(reqbuf, 0, msize);
+	memset(rspbuf, 0, msize);
+
+	int fd = -1; 
+
 	while (true) {	
+		if (fd < 0) {
+			fd = beyondy::XbsClient(host, O_NONBLOCK, timeout);
+			if (fd < 0) {
+				fprintf(stdout, "%s connect failed: %m\n", tag);
+				continue;
+			}
+		}
+
 		if (__send_req(fd, cmd, reqbuf, pkgSize, tag) < 0) {
 			fprintf(stdout, "%s send req failed: %m\n", tag);
-			break;
+			close(fd); fd = -1;
+			continue;
+		}
+		else {
+			++pkgSent[id];
+			byteSent[id] += pkgSize;
 		}
 
-		++countSend[id];
 		if (__read_rsp(fd, rspbuf, pkgSize, tag) < 0) {
 			fprintf(stdout, "%s read rsp failed: %m\n", tag);
-			break;
+			close(fd); fd = -1;
+			continue;	
 		}
-
-		++countRecv[id];
+		else {
+			++pkgRspd[id];
+			byteRspd[id] += pkgSize;
+		}
 	}
 
 	return NULL;
@@ -127,14 +185,19 @@ int main(int argc, char **argv)
 {
 	if (argc < 2) {
 usage:
-		fprintf(stderr, "Usage: %s [-c cmd ] [-t thread-cnt] [-s pkg-size] host\n", argv[0]);
+		fprintf(stderr, "Usage: %s [-c cmd ] [ -S | A ] [-t thread-cnt] [-s pkg-size] host\n", argv[0]);
+		fprintf(stderr, "    cmd=0: echo, 2: forward\n");
+		fprintf(stderr, "    -S sync-req-rsp mode. default.\n");
+		fprintf(stderr, "    -A async-req-rsp mode\n");
 		exit(0);
 	}
 
-	int ch;
-	while ((ch = getopt(argc, argv, "c:t:s:h")) != EOF) {
+	int ch, sync = 1;
+	while ((ch = getopt(argc, argv, "c:SAt:s:h")) != EOF) {
 		switch (ch) {
 		case 'c': cmd = atoi(optarg); break;
+		case 'S': sync = 1; break;
+		case 'A': sync = 0; break;
 		case 't': tcnt = atoi(optarg); break;
 		case 's': pkgSize = atoi(optarg); break;
 		case 'h': goto usage;
@@ -145,33 +208,39 @@ usage:
 	if (optind >= argc) goto usage;
 	host = strdup(argv[optind]);
 
-	countSend = new long[tcnt];
-	countRecv = new long[tcnt];
-	for (int i = 0; i < tcnt; ++i) countSend[i] = countRecv[i] = 0;
+	pkgSent = new long[tcnt];
+	byteSent = new long[tcnt];
+	pkgRspd = new long[tcnt];
+	byteRspd = new long[tcnt];
+	for (int i = 0; i < tcnt; ++i) pkgSent[i] = pkgRspd[i] = byteSent[i] = byteRspd[i] = 0;
 
 	srandom(time(NULL));
 	setbuf(stdout, NULL);
 
 	pthread_t tids[tcnt];
 	for (int i = 0; i < tcnt; ++i) {
-		errno = pthread_create(&tids[i], NULL, worker, (void *)(long)i);
+		errno = pthread_create(&tids[i], NULL, sync ? sync_worker : async_worker, (void *)(long)i);
 		if (errno) {
 			fprintf(stdout, "create the %dth thread failed: %m\n", i);
 			exit(1);
 		}
 	}
 
-	long lastSend = 0, lastRecv = 0;
+	long lastPkgSent = 0, lastPkgRspd = 0;
+	long lastByteSent = 0, lastByteRspd = 0;
 	struct timeval t1, t2;
 
 	gettimeofday(&t1, NULL);
 	while (true) {
 		sleep(10);
-		long thisSend = 0, thisRecv = 0;
+		long thisPkgSent = 0, thisPkgRspd = 0;
+		long thisByteSent = 0, thisByteRspd = 0;
 
 		for (int i = 0; i < tcnt; ++i) {
-			thisSend += countSend[i];
-			thisRecv += countRecv[i];
+			thisPkgSent += pkgSent[i];
+			thisByteSent += byteSent[i];
+			thisPkgRspd += pkgRspd[i];
+			thisByteRspd += byteRspd[i];
 		}
 
 		gettimeofday(&t2, NULL);
@@ -180,12 +249,16 @@ usage:
 
 		fprintf(stdout, "%02d:%02d:%02d send %8ld %.2fpkg/s %.2fMB/s recv %8ld %.2fpkg/s %.2fMB/s\n",
 			ptm->tm_hour, ptm->tm_min, ptm->tm_sec,
-			thisSend - lastSend, 1000.0 * (thisSend - lastSend) / ms, 1000.0 * (thisSend - lastSend) / ms * pkgSize / 1e6,
-			thisRecv - lastRecv, 1000.0 * (thisRecv - lastRecv) / ms, 1000.0 * (thisRecv - lastRecv) / ms * pkgSize / 1e6);
+			thisPkgSent - lastPkgSent, 1000.0 * (thisPkgSent - lastPkgSent) / ms, 
+			(thisByteSent - lastByteSent) / ms / 1000.0,
+			thisPkgRspd - lastPkgRspd, 1000.0 * (thisPkgRspd - lastPkgRspd) / ms,
+			(thisByteRspd - lastByteRspd) / ms / 1000.0);
 
 		t1 = t2;
-		lastSend = thisSend;
-		lastRecv = thisRecv;
+		lastPkgSent = thisPkgSent;
+		lastByteSent = thisByteSent;
+		lastPkgRspd = thisPkgRspd;
+		lastByteRspd= thisByteRspd;
 	}
 
 	return 0;
