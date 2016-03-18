@@ -5,21 +5,10 @@
  * sock-address string <--> struct.
  *
  * address string format as:
- *    [domain@]address[:service]
- *  1, domain can be number as PF_UNIX, etc. or name as unix/inet/inet6, etc.
- *     if not specified, which will be guessed by address.
- *  2, address can be sorrounded by "[]" optionally.
- *  3, when domain is unix, address is the unix path.
- *     service is numeric or name of stream/tcp, dgram/udp, etc
- *  3, when domain is inet/inet6, address is the ip-addr(dotted-quad format or host-name)
- *     service is service-name or port/type
- *  4, if domain is ommited, which can be guessed by the following way:
- *     it's unix if:
- *        started by '/'
- *     it's inet if:
- *        dotted-quad format
- *     it's inet6 if:
- * 	  ipv6-formated address
+ *    tcp://host:port
+ *    udp://host:port
+ *    tcp:@path:port
+ *    udp:@path:port
  *
  * 1, beyondy.u.c.w, feb 3, 2008
  *    create first. 
@@ -32,8 +21,8 @@
 
 namespace beyondy {
 
-int XbsPaddr2n(const char *address, int *type, int *protocol, struct sockaddr *naddr, socklen_t *nlen, size_t* pos = NULL);
-int XbsNaddr2p(const struct sockaddr *naddr, int type, int protocol, char *address, size_t addrlen);
+int str2sockaddr(const char *str, int *ptype, struct sockaddr *naddr, socklen_t *nlen, int count);
+int sockaddr2str(const struct sockaddr *naddr, int type, char *address, size_t addrlen);
 
 }; /* namespace beyondy */
 

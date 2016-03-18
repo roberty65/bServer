@@ -55,26 +55,20 @@ int Connector::onWritable(int fd)
 }
 
 int Connector::open()
-{	
-	struct sockaddr_storage addr_buf;
-	socklen_t addr_len = sizeof(addr_buf);
-	int type, protocol;
-
-	if (XbsPaddr2n(address, &type, &protocol, (struct sockaddr *)&addr_buf, &addr_len) < 0) return -1;
-	if ((fd = XbsSocket(addr_buf.ss_family, type, protocol)) < 0) return -1;
-	if (XbsSetFlags(fd, O_NONBLOCK, 0) < 0) return -1;
-	if (XbsConnect(fd, (struct sockaddr *)&addr_buf, addr_len, 0) < 0) {
+{
+	fd = XbsClient(address, O_NONBLOCK, 0);
+	if (fd >= 0) {
 		if (errno == EINPROGRESS) {
 			events = EVENT_OUT;
 			status = CONN_OPENNING;
 		}
 		else {
-			return -1;
+			events = EVENT_IN;
+			status = CONN_ESTABLISHED;
 		}
 	} 
 	else {
-		events = EVENT_IN;
-		status = CONN_ESTABLISHED;
+		return -1;
 	}
 
 	SYSLOG_DEBUG("connector(%s) open OK, fd=%d flow=%d, status=%d", address, fd, flow, (int)status);

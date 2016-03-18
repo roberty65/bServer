@@ -24,7 +24,7 @@ int XbsBind(int fd, const char *address)
 	struct sockaddr_storage addr_buf;
 	socklen_t addr_len = sizeof(addr_buf);
 
-	if (XbsPaddr2n(address, NULL, NULL, (struct sockaddr *)&addr_buf, &addr_len) < 0) return -1;
+	if (str2sockaddr(address, NULL, (struct sockaddr *)&addr_buf, &addr_len, 1) < 1) return -1;
 	return bind(fd, (struct sockaddr *)&addr_buf, addr_len);
 }
 
@@ -46,7 +46,10 @@ int XbsConnect(int fd, const struct sockaddr *target, socklen_t alen, long timed
 {
 	int retval = connect(fd, target, alen);
 	if (retval == -1) {
-		if (errno == EINPROGRESS && timedout > 0) {
+		if (timedout < 1)
+			return 0;	// with errno
+
+		if (errno == EINPROGRESS) {
 			if (XbsWaitWritable(fd, timedout) < 0) {
 				return -1;
 			}
@@ -56,6 +59,7 @@ int XbsConnect(int fd, const struct sockaddr *target, socklen_t alen, long timed
 				return -1;
 			}
 
+			errno = 0;	// clear errno
 			return 0;
 		}
 		else {
@@ -63,6 +67,7 @@ int XbsConnect(int fd, const struct sockaddr *target, socklen_t alen, long timed
 		}
 	}
 	
+	errno = 0;	// clear errno
 	return 0;	// good?!
 }
 
@@ -71,7 +76,7 @@ int XbsConnect(int fd, const char *target, long timedout)
 	struct sockaddr_storage addr_buf;
 	socklen_t addr_len = sizeof(addr_buf);
 
-	if (XbsPaddr2n(target, NULL, NULL, (struct sockaddr *)&addr_buf, &addr_len) < 0) return -1;
+	if (str2sockaddr(target, NULL, (struct sockaddr *)&addr_buf, &addr_len, 1) < 1) return -1;
 	return XbsConnect(fd, (struct sockaddr *)&addr_buf, addr_len, timedout);
 }
 
@@ -88,7 +93,7 @@ int XbsGetPeername(int fd, char *nbuf, size_t size)
 	if (getpeername(fd, (struct sockaddr *)&addr_buf, &addr_len) < 0) return -1;
 	if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &tlen) < 0) return -1;
 
-	return XbsNaddr2p((struct sockaddr *)&addr_buf, type, 0, nbuf, size);
+	return sockaddr2str((struct sockaddr *)&addr_buf, type, nbuf, size);
 }
 
 int XbsGetLocalname(int fd, char *nbuf, size_t size)
@@ -101,7 +106,7 @@ int XbsGetLocalname(int fd, char *nbuf, size_t size)
 	if (getsockname(fd, (struct sockaddr *)&addr_buf, &addr_len) < 0) return -1;
 	if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &tlen) < 0) return -1;
 
-	return XbsNaddr2p((struct sockaddr *)&addr_buf, type, 0, nbuf, size);
+	return sockaddr2str((struct sockaddr *)&addr_buf, type, nbuf, size);
 }
 
 /* flags & other socket ops */
@@ -207,11 +212,11 @@ int XbsServer(const char *address, int backlog, int flags, int reuse)
 {
 	struct sockaddr_storage addr_buf;
 	socklen_t addr_len = sizeof(addr_buf);
-	int type, protocol;
+	int type;
 	int fd;
 
-	if (XbsPaddr2n(address, &type, &protocol, (struct sockaddr *)&addr_buf, &addr_len) < 0) goto error_out;
-	if ((fd = XbsSocket(addr_buf.ss_family, type, protocol)) < 0) goto error_out;
+	if (str2sockaddr(address, &type, (struct sockaddr *)&addr_buf, &addr_len, 1) < 0) goto error_out;
+	if ((fd = XbsSocket(addr_buf.ss_family, type, 0)) < 0) goto error_out;
 	if (flags && XbsSetFlags(fd, flags, 0) < 0) goto error_close;
 	if (XbsSetReuse(fd, reuse) < 0) goto error_close;
 	if (bind(fd, (struct sockaddr *)&addr_buf, addr_len) < 0) goto error_close;
@@ -229,11 +234,11 @@ int XbsClient(const char *address, int flags, long timedout)
 {
 	struct sockaddr_storage addr_buf;
 	socklen_t addr_len = sizeof(addr_buf);
-	int type, protocol;
+	int type;
 	int fd;
 
-	if (XbsPaddr2n(address, &type, &protocol, (struct sockaddr *)&addr_buf, &addr_len) < 0) goto error_out;
-	if ((fd = XbsSocket(addr_buf.ss_family, type, protocol)) < 0) goto error_out;
+	if (str2sockaddr(address, &type, (struct sockaddr *)&addr_buf, &addr_len, 1) < 1) goto error_out;
+	if ((fd = XbsSocket(addr_buf.ss_family, type, 0)) < 0) goto error_out;
 	if (flags && XbsSetFlags(fd, flags, 0) < 0) goto error_close;
 	if (XbsConnect(fd, (struct sockaddr *)&addr_buf, addr_len, timedout) < 0) goto error_close;
 	return fd;
