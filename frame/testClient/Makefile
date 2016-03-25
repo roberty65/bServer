@@ -23,7 +23,10 @@ OBJ2 = testBenchmark.o
 DST3 = ./testForward
 OBJ3 = testForward.o
 
-all: $(DEST) $(DST2) $(DST3)
+DST4 = ./testMessage
+OBJ4 = testMessage.o
+
+all: $(DEST) $(DST2) $(DST3) $(DST4)
 
 $(DEST): $(OBJS)
 	g++ -o $@ $(LDFLAGS) $(OBJS) $(DEPS) $(LIB)
@@ -31,13 +34,14 @@ $(DST2): $(OBJ2)
 	g++ -o $@ $(LDFLAGS) $(OBJ2) $(DEPS) $(LIB)
 $(DST3): $(OBJ3)
 	g++ -o $@ $(LDFLAGS) $(OBJ3) $(DEPS) $(LIB)
-
+$(DST4): $(OBJ4)
+	g++ -o $@ $(LDFLAGS) $(OBJ4) $(DEPS) $(LIB) -L $(FSH_LIB) -lProcessor
 .cpp.o:
 	g++ -c -o $@ $(INC) $(CXXFLAGS) $<
 .c.o:
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 
 clean:
-	rm -f $(OBJS) $(DST2) $(OBJ2) $(DST3) $(OBJ3) *~ *.s *.ii *.i
+	rm -f $(OBJS) $(DST2) $(OBJ2) $(DST3) $(OBJ3) $(DST4) $(OBJ4) *~ *.s *.ii *.i
 distclean: clean
 	rm -f $(DEST)

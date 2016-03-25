@@ -24,8 +24,8 @@ public:
 #define PTR(p)		((unsigned char *)p)
 #define XB1(d,s)	*(d) = *(s)
 #define XB2(d,s)	XB1(d,s);XB1(d+1,s+1)
-#define XB4(d,s)	XB2(s,d);XB2(s+2,d+2)
-#define XB8(d,s)	XB4(s,d);XB4(s+4,d+4)
+#define XB4(d,s)	XB2(d,s);XB2(d+2,s+2)
+#define XB8(d,s)	XB4(d,s);XB4(d+4,s+4)
 	int readInt8(int8_t& v) { if (rptr < wptr) { XB1(PTR(&v), PTR(data() + rptr)); rptr++; return 0; } return -1; }
 	int readInt16(int16_t& v) { if (rptr + 1 < wptr) { XB2(PTR(&v), PTR(data() + rptr)); rptr += 2; return 0; } return -1; }
 	int readInt32(int32_t& v) { if (rptr + 3 < wptr) { XB4(PTR(&v), PTR(data() + rptr)); rptr += 4; return 0; } return -1; }
@@ -38,12 +38,12 @@ public:
 
 	int writeInt8(int8_t v) { if (wptr < (long)dblk.dsize()) { XB1(PTR(data() + wptr), PTR(&v)); wptr++; return 0; } return -1; }
 	int writeInt16(int16_t v) { if (wptr + 1 < (long)dblk.dsize()) { XB2(PTR(data() + wptr), PTR(&v)); wptr += 2; return 0; } return -1; }
-	int writeInt32(int32_t v) { if (wptr + 3 < (long)dblk.dsize()) { XB2(PTR(data() + wptr), PTR(&v)); wptr += 4; return 0; } return -1; }
-	int writeInt64(int64_t v) { if (wptr + 7 < (long)dblk.dsize()) { XB2(PTR(data() + wptr), PTR(&v)); wptr += 8; return 0; } return -1; }
-	int writeUint8(uint8_t v) { if (wptr < (long)dblk.dsize()) { XB2(PTR(data() + wptr), PTR(&v)); wptr++; return 0; } return -1; }
+	int writeInt32(int32_t v) { if (wptr + 3 < (long)dblk.dsize()) { XB4(PTR(data() + wptr), PTR(&v)); wptr += 4; return 0; } return -1; }
+	int writeInt64(int64_t v) { if (wptr + 7 < (long)dblk.dsize()) { XB8(PTR(data() + wptr), PTR(&v)); wptr += 8; return 0; } return -1; }
+	int writeUint8(uint8_t v) { if (wptr < (long)dblk.dsize()) { XB1(PTR(data() + wptr), PTR(&v)); wptr++; return 0; } return -1; }
 	int writeUint16(uint16_t v) { if (wptr + 1 < (long)dblk.dsize()) { XB2(PTR(data() + wptr), PTR(&v)); wptr += 2; return 0; } return -1; }
-	int writeUint32(uint32_t v) { if (wptr + 3 < (long)dblk.dsize()) { XB2(PTR(data() + wptr), PTR(&v)); wptr += 4; return 0; } return -1; }
-	int writeUint64(uint64_t v) { if (wptr + 6 < (long)dblk.dsize()) { XB2(PTR(data() + wptr), PTR(&v)); wptr += 8; return 0; } return -1; }
+	int writeUint32(uint32_t v) { if (wptr + 3 < (long)dblk.dsize()) { XB4(PTR(data() + wptr), PTR(&v)); wptr += 4; return 0; } return -1; }
+	int writeUint64(uint64_t v) { if (wptr + 7 < (long)dblk.dsize()) { XB8(PTR(data() + wptr), PTR(&v)); wptr += 8; return 0; } return -1; }
 	int writeString(const char *buf, size_t size = 0);
 private:
 	int resize(size_t nsize);
@@ -51,6 +51,7 @@ public:
 	unsigned char *data() const { return dblk.data(); }
 	size_t leftCapacity() const { return dblk.dsize() - (size_t)wptr; }
 	int enlargeCapacity(size_t nsize) { if (dblk.dsize() >= nsize) return 0; return resize(nsize); }
+	void reset() { rptr = wptr = 0; }
 public:	
 	Block dblk;
 	long rptr;	/* current read-pointer */
