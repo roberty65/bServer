@@ -6,7 +6,7 @@ LDFLAGS  =
 
 DEST = ../lib/libcommon.a
 OBJS = xbs_naddr.o xbs_io.o xbs_socket.o nam2val.o md5.o \
-       slab_cache.o rbtree.o proto_h16.o bprof.o
+       slab_cache.o rbtree.o proto_h16.o bprof.o ConfigProperty.o
 #
 # has depends on libxml2 log4cpp
 # log.o xmlconfig.o 
@@ -23,7 +23,7 @@ $(DEST): $(OBJS)
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 
 clean:
-	rm -f $(OBJS) $(DEST) *~ *.s *.ii *.i
+	rm -f $(OBJS) *~ *.s *.ii *.i
 distclean: clean
 	rm $(DEST)
 

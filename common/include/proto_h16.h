@@ -12,7 +12,7 @@ struct proto_h16_head {	// 16 bytes
 };
 
 struct proto_h16_res : public proto_h16_head {
-	int32_t ret_;
+	int32_t ret;
 };
 
 #endif /*! __PROTO__H16__H */

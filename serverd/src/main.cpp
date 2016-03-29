@@ -7,8 +7,11 @@
 #include <ctype.h>
 #include <errno.h>
 #include <assert.h>
+#include <string>
+#include <map>
 
 #include "beyondy/bprof.h"
+#include "ConfigProperty.h"
 #include "Bprof_ids.h"
 #include "Message.h"
 #include "Queue.h"
@@ -37,113 +40,77 @@ static const char *businessProcessor = NULL;
 static int connectionIdleTimeout = 5;
 static int connectionOutQueueSize = 10;
 
-static const char *connectorAddress = NULL;
+struct ConnectorInfo {
+	const char *address;
+	int flow;
+	ConnectorInfo(const char *_address, int _flow) : address(_address), flow(_flow) {}
+};
+typedef std::map<std::string, ConnectorInfo> ConnectorMap;
+static ConnectorMap connectors;
+
 static int connectorHelloInterval = 5;
 
-static int parseNameValue(const char *name, const char *val)
+// if need, 
+// must be called in Processor->onInit
+extern "C" int addConnector(const char *name, const char *address, int openImmediately)
 {
-	fprintf(stderr, "%s=%s\n", name, val);
-	if (strcmp(name, "logLevel") == 0) {
-		if (strcmp(val, "FATAL") == 0) logLevel = LOG_LEVEL_FATAL;
-		else if (strcmp(val, "ERROR") == 0) logLevel = LOG_LEVEL_ERROR;
-		else if (strcmp(val, "WARN") == 0) logLevel = LOG_LEVEL_WARN;
-		else if (strcmp(val, "INFO") == 0) logLevel = LOG_LEVEL_INFO;
-		else if (strcmp(val, "DEBUG") == 0) logLevel = LOG_LEVEL_DEBUG;
-		else return -1;
-	}
-	else if (strcmp(name, "logFileName") == 0) {
-		if ((logFileName = strdup(val)) == NULL) return -1;
-	}
-	else if (strcmp(name, "logFileMaxSize") == 0) {
-		char *endptr;
-		logFileMaxSize = strtol(val, &endptr, 0);
-		logFileMaxSize *= (*endptr == 'k' || *endptr == 'K') ? 1024 :
-				  (*endptr == 'm' || *endptr == 'M') ? 1024*1024 :
-				  (*endptr == 'g' || *endptr == 'G') ? 1024*1024*1024 : 1;
-	}
-	else if (strcmp(name, "logMaxBackup") == 0) {
-		logMaxBackup = strtol(val, NULL, 0);
-	}
-	else if (strcmp(name, "listenAddress") == 0) {
-		if ((listenAddress = strdup(val)) == NULL) return -1;
-	}
-	else if (strcmp(name, "listenBacklog") == 0) {
-		listenBacklog = strtol(val, NULL, 0);
-	}
-	else if (strcmp(name, "listenMaxConnection") == 0) {
-		listenMaxConnection = strtol(val, NULL, 0);
-	}
-	else if (strcmp(name, "systemThreadCount") == 0) {
-		systemThreadCount = strtol(val, NULL, 0);
-	}
-	else if (strcmp(name, "systemInQueueSize") == 0) {
-		systemInQueueSize = strtol(val, NULL, 0);
-	}
-	else if (strcmp(name, "systemOutQueueSize") == 0) {
-		systemOutQueueSize = strtol(val, NULL, 0);
-	}
-	else if (strcmp(name, "businessProcessor") == 0) {
-		if ((businessProcessor = strdup(val)) == NULL) return -1;
-	}
-	else if (strcmp(name, "connectionIdleTimeout") == 0) {
-		connectionIdleTimeout = strtol(val, NULL, 0);
-	}
-	else if (strcmp(name, "connectorAddress") == 0) {
-		if ((connectorAddress = strdup(val)) == NULL) return -1;
-	}
-	else if (strcmp(name, "connectorHelloInterval") == 0) {
-		connectorHelloInterval = strtol(val, NULL, 0);
-	}
+	// TODO:
+	return -1;
+}
 
-	return 0;
+extern "C" int getConnector(const char *name)
+{
+	std::map<std::string, ConnectorInfo>::iterator iter = connectors.find(name);
+	if (iter == connectors.end()) return -1;
+	return iter->second.flow;
 }
 
 static int loadConfig(const char *file)
 {
-	FILE *fp = fopen(file, "r");
-	if (fp == NULL) return -1;
+	ConfigProperty cfp;
+	if (cfp.parse(file) < 0) return -1;
 
-	char buf[8192];
-	int lineno = 0;
+	const char *val = cfp.getString("logLevel", "ERROR");
+	if (strcmp(val, "FATAL") == 0) logLevel = LOG_LEVEL_FATAL;
+	else if (strcmp(val, "ERROR") == 0) logLevel = LOG_LEVEL_ERROR;
+	else if (strcmp(val, "WARN") == 0) logLevel = LOG_LEVEL_WARN;
+	else if (strcmp(val, "INFO") == 0) logLevel = LOG_LEVEL_INFO;
+	else if (strcmp(val, "DEBUG") == 0) logLevel = LOG_LEVEL_DEBUG;
+	else logLevel = LOG_LEVEL_ERROR;
+	
+	val = cfp.getString("logFileName", "../logs/server.log");	
+	if ((logFileName = strdup(val)) == NULL) return -1;
+	
+	logFileMaxSize = cfp.getInt("logFileMaxSize", 10*1024*1024);
+	logMaxBackup = cfp.getInt("logMaxBackup", 10);
 
-	while (fgets(buf, sizeof buf, fp) != NULL) {
-		++lineno;
-		if (*buf == '#') continue;
+	val = cfp.getString("listenAddress", "tcp://*:6010");
+	if ((listenAddress = strdup(val)) == NULL) return -1;
+	
+	listenBacklog = cfp.getInt("listenBacklog", 1024);
+	listenMaxConnection = cfp.getInt("listenMaxConnection", 8192);
 
-		int slen = strlen(buf);	
-		while (slen > 0 && (buf[slen - 1] == '\n' || buf[slen - 1] == '\r'))
-			--slen;
-		buf[slen] = 0;
+	systemThreadCount = cfp.getInt("systemThreadCount", 8);
+	systemInQueueSize = cfp.getInt("systemInQueueSize", 8192);
+	systemOutQueueSize = cfp.getInt("systemOutQueueSize", 16384);
+	
+	val = cfp.getString("businessProcessor", "../lib/libEcho.so");
+	if ((businessProcessor = strdup(val)) == NULL) return -1;
 
-		char *endptr = buf + slen;
-		if ((endptr = strchr(buf, '#')) != NULL) {
-			*endptr = 0;
+	connectionIdleTimeout = cfp.getInt("connectionIdleTimeout", 10);
+
+	connectorHelloInterval = cfp.getInt("connectorHelloInterval", 3);
+	std::set<std::string> ctrs = cfp.getChildren("connector");
+	for (std::set<std::string>::iterator iter = ctrs.begin();
+		iter != ctrs.end();
+			++iter) {
+		val = cfp.getString("connector", iter->c_str(), "address", NULL);
+		if (val == NULL || (val = strdup(val)) == NULL) return -1;
+		if (val != NULL) {
+			connectors.insert(std::make_pair(*iter, ConnectorInfo(val, -1)));
 		}
-
-#define SKIP_SPACE(p)	do { while (isspace(*(p))) (p)++; } while (0)
-#define SKIP_CHARS(p)	do { while (*(p) && !isspace(*(p))) (p)++; } while (0)
-		char *nptr = buf;
-		SKIP_SPACE(nptr);
-		if (*nptr == 0) continue; // empty-line
-
-		char *vptr = strchr(nptr, '=');
-		if (vptr == NULL) {
-			fprintf(stderr, "No '=' found at line: %d\n", lineno);
-			return errno = EINVAL, -1;
-		}
-		else {
-			*vptr++ = 0;
-		}
-
-		SKIP_SPACE(nptr); endptr = nptr; SKIP_CHARS(endptr); *endptr = 0;
-		SKIP_SPACE(vptr); endptr = vptr; SKIP_CHARS(endptr); *endptr = 0;
-#undef SKIP_SPACE
-#undef SKIP_CHARS
-		if (parseNameValue(nptr, vptr) < 0)
-			break;
 	}
 
-	fclose(fp);
 	return 0;
 }
 
@@ -183,18 +150,6 @@ extern "C" void appCallback(const char* s)
 	fprintf(stderr, "appCallback: %s\n", s);
 }
 
-// must be called in Processor->onInit
-extern "C" int addConnector(const char *name, const char *address, int openImmediately)
-{
-	// TODO:
-	return -1;
-}
-
-extern "C" int getConnector(const char *name)
-{
-	// TODO:
-	return -1;
-}
 
 beyondy::bprof_item items[] = {
 	{ BPT_LOOP, "mai-loop", 0, 0 },
@@ -288,7 +243,7 @@ int main(int argc, char **argv)
 	Processor *processor = loadProcessor(businessProcessor);
 	processor->setSendFunc(async_send_delegator, outQ);
 	if (processor->onInit() < 0) {
-		SYSLOG_ERROR("processor onInit failed: %m");
+		SYSLOG_FATAL("processor onInit failed: %m");
 		exit(1);
 	}
 
@@ -300,17 +255,19 @@ int main(int argc, char **argv)
 	connectionOutQueueSize = 10;
 	int retval = emgr->addListener(listenAddress, inQ, processor, listenMaxConnection);
 	if (retval < 0) {
-		SYSLOG_ERROR("addListener failed");
+		SYSLOG_FATAL("addListener at %s failed", listenAddress);
 		return 1;
 	}
 
-	if (connectorAddress != NULL) {
-		SYSLOG_DEBUG("connector=%s, interval=%d", connectorAddress, connectorHelloInterval);
-		int cid = emgr->addConnector(connectorAddress, inQ, processor, 1);
+	if (!connectors.empty()) for (ConnectorMap::iterator iter = connectors.begin(); iter != connectors.end(); ++iter) {
+		int cid = emgr->addConnector(iter->second.address, inQ, processor, 1);
 		if (cid < 0) {
-			SYSLOG_ERROR("addConnector failed");
+			SYSLOG_FATAL("addConnector(%s) failed", iter->first.c_str());
 			return 2;
 		}
+	
+		iter->second.flow = cid;
+		SYSLOG_DEBUG("connector=%s, interval=%d, flow=%d", iter->first.c_str(), connectorHelloInterval, cid);
 	}
 
 	emgr->start();

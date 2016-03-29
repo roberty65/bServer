@@ -80,10 +80,10 @@ int main(int argc, char **argv)
 	unsigned char buf[15] = { 0 };
 	Message msg(buf, sizeof buf);
 
-	int8_t a1, b1;
-	int16_t a2, b2;
-	int32_t a3, b3;
-	int64_t a4, b4;
+	int8_t a1, b1 = 0;
+	int16_t a2, b2 = 0;
+	int32_t a3, b3 = 0;
+	int64_t a4, b4 = 0;
 
 	a1 = 0x79;
 	a2 = 0x7fff;

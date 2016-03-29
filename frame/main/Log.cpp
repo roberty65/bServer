@@ -55,6 +55,12 @@ int LogHandle::doLog(int level, const char *fmt...)
 	assert(wlen == mlen);
 
 	close(fd);
+
+	//
+	// write console for fatal log too
+	// then exit?
+	if (level == LOG_LEVEL_FATAL) fprintf(stderr, "%s", buf);
+
 	return 0;
 }
 
