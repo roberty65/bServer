@@ -1,4 +1,4 @@
 VER_1.0 {
 	global:
-		appCallback;
+		getConnector;
 };

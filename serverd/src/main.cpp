@@ -145,12 +145,6 @@ static void usage(const char *p)
 	exit(0);
 }
 
-extern "C" void appCallback(const char* s)
-{
-	fprintf(stderr, "appCallback: %s\n", s);
-}
-
-
 beyondy::bprof_item items[] = {
 	{ BPT_LOOP, "mai-loop", 0, 0 },
 	{ BPT_EM_WAITING, "waiting events", 0, 0 },
@@ -236,21 +230,18 @@ int main(int argc, char **argv)
 		fprintf(stderr, "SYS-LOG-INIT failed: %m\n");
 		exit(1);
 	}
+	else {
+		SYSLOG_INFO("serverd started");
+	}
 	
 	Queue<Message> *inQ = new Queue<Message>(systemInQueueSize);
 	Queue<Message> *outQ = new Queue<Message>(systemOutQueueSize);
 
 	Processor *processor = loadProcessor(businessProcessor);
 	processor->setSendFunc(async_send_delegator, outQ);
-	if (processor->onInit() < 0) {
-		SYSLOG_FATAL("processor onInit failed: %m");
-		exit(1);
-	}
-
-	MtWorker *mtWorker = new MtWorker(inQ, processor, systemThreadCount);
-	mtWorker->start();
 
 	EventManager *emgr = new EventManager(outQ, 1024);
+	emgr->setConnectionMaxIdle(connectionIdleTimeout);
 
 	connectionOutQueueSize = 10;
 	int retval = emgr->addListener(listenAddress, inQ, processor, listenMaxConnection);
@@ -269,6 +260,16 @@ int main(int argc, char **argv)
 		iter->second.flow = cid;
 		SYSLOG_DEBUG("connector=%s, interval=%d, flow=%d", iter->first.c_str(), connectorHelloInterval, cid);
 	}
+
+	// init here for it may call add/getConnector
+	if (processor->onInit() < 0) {
+		SYSLOG_FATAL("processor onInit failed: %m");
+		exit(1);
+	}
+
+	// start worker before event manager starts
+	MtWorker *mtWorker = new MtWorker(inQ, processor, systemThreadCount);
+	mtWorker->start();
 
 	emgr->start();
 

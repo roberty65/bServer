@@ -50,7 +50,7 @@ private:
 	void checkTimeout();
 public:
 	int start();
-
+	void setConnectionMaxIdle(int seconds) { this->connectionMaxIdle = seconds; }
 private:
 	int epoll_fd;
 

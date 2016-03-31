@@ -16,19 +16,9 @@
 #define ECHO_CMD_MORE_RSP	5
 
 using namespace beyondy::Async;
-extern "C" void appCallback(const char *);
 
 int Echo::onInit()
 {
-//	void *dl = dlopen(NULL, RTLD_NOW|RTLD_GLOBAL);
-//	void (*cb)(const char *) = (void (*)(const char*))dlsym(dl, "appCallback");
-//	if (cb != NULL) {
-//		(*cb)("hello, get u!!!");
-//	}
-//	NOT WORK!!!
-	
-	appCallback("hello, this is Echo onInit");
-
 	maxInputSize = 50 * 1024 * 1024;
 	maxOutputSize = 50 * 1024 * 1024;
 

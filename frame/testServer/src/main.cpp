@@ -8,11 +8,6 @@
 
 using namespace beyondy::Async;
 
-extern "C" void appCallback(const char *s)
-{
-	fprintf(stdout, "%s\n", s);
-}
-
 int main(int argc, char **argv)
 {
 	SYSLOG_INIT("../logs/server.log", LOG_LEVEL_DEBUG, 1048576, 10);	
