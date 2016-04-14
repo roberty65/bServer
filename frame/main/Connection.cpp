@@ -53,8 +53,8 @@ int Connection::onReadable(int fd)
 
 	size_t hsize = proc->headerSize();
 	size_t msize;
-	if ((size_t)inMsg->wptr < hsize) {
-		size_t rest = hsize - inMsg->wptr;
+	if ((size_t)inMsg->getWptr() < hsize) {
+		size_t rest = hsize - inMsg->getWptr();
 		assert(rest >= 0 && rest <= hsize);
 		SYSLOG_DEBUG("connection fd=%d flow=%d to read head-rest=%d", fd, flow, (int)rest);
 		
@@ -72,7 +72,7 @@ int Connection::onReadable(int fd)
 		}
 
 		SYSLOG_DEBUG("connection fd=%d flow=%d read head OK, got msize=%ld", fd, flow, (long)msize);
-		if (inMsg->enlargeCapacity(msize) < 0) {
+		if (inMsg->ensureCapacity(msize) < 0) {
 			SYSLOG_DEBUG("connection fd=%d flow=%d read resize to msize=%ld failed", fd, flow, (long)msize);
 			return -1;	/* ???try later */
 		}
@@ -80,13 +80,13 @@ int Connection::onReadable(int fd)
 	else {
 		/* cache it? */
 		msize = proc->calcMessageSize(inMsg);
-		if (inMsg->enlargeCapacity(msize) < 0) {
+		if (inMsg->ensureCapacity(msize) < 0) {
 			SYSLOG_DEBUG("connection fd=%d flow=%d read resize to msize=%ld failed", fd, flow, (long)msize);
 			return -1;	/* try later */
 		}
 	}
 
-	size_t rest = msize - inMsg->wptr;
+	size_t rest = msize - inMsg->getWptr();
 	assert(rest >= 0 && rest <= msize - hsize);
 	SYSLOG_DEBUG("connection fd=%d flow=%d to read body rest=%ld", fd, flow, (long)rest);
 
@@ -124,10 +124,10 @@ int Connection::onWritable(int fd)
 		outMsg = outQueue->front();
 		outQueue->pop_front();
 
-		SYSLOG_DEBUG("connection fd=%d flow=%d start to send out msg(len=%ld)", fd, flow, (long)outMsg->wptr);
+		SYSLOG_DEBUG("connection fd=%d flow=%d start to send out msg(len=%ld)", fd, flow, (long)outMsg->getWptr());
 	}
 
-	size_t left = outMsg->wptr - outMsg->rptr;
+	size_t left = outMsg->getWptr() - outMsg->getRptr();
 	ssize_t wlen = writeN(outMsg, left);
 	++outMsg->ioCount;
 
@@ -162,7 +162,7 @@ int Connection::sendMessage(Message *msg)
 	BPROF_TRACE(BPT_CONN_SENDMESSAGE)
 	if (outMsg == NULL && outQueue->empty()) {
 		/* send out directly as can as possible */
-		size_t rest = msg->wptr - msg->rptr;
+		size_t rest = msg->getWptr() - msg->getRptr();
 		ssize_t wlen = writeN(msg, rest);
 		++msg->ioCount;
 
@@ -223,13 +223,13 @@ int Connection::destroy() {
 ssize_t Connection::readN(size_t size)
 {
 	assert(size > 0);
-	ssize_t rlen = ::read(fd, inMsg->data() + inMsg->wptr, size);
+	ssize_t rlen = ::read(fd, inMsg->wb(), size);
 	if ((size_t)rlen == size) {
-		inMsg->wptr += rlen;
+		inMsg->incWptr(rlen);
 		return rlen;
 	}
 	else if (rlen > 0) {
-		inMsg->wptr += rlen;
+		inMsg->incWptr(rlen);
 		return rlen;
 	}
 	else if (rlen == 0) {
@@ -248,14 +248,14 @@ ssize_t Connection::writeN(Message *msg, size_t size)
 	BPROF_TRACE(BPT_CONN_WRITEN)
 
 	assert(size > 0);
-	ssize_t wlen = ::write(fd, msg->data() + msg->rptr, size);
+	ssize_t wlen = ::write(fd, msg->rb(), size);
 
 	if ((size_t)wlen == size) {
-		msg->rptr += wlen;
+		msg->incRptr(wlen);
 		return wlen;
 	}
 	else if (wlen > 0) {
-		msg->rptr += wlen;
+		msg->incRptr(wlen);
 		return wlen;
 	}
 	else {

@@ -36,21 +36,21 @@ void Echo::onExit()
 int Echo::doEcho(Message *req)
 {
 	int takenMs = 0;
-	if (req->wptr >= (long)(sizeof(struct proto_h16_head) + sizeof(int))) {
+	if (req->getWptr() >= (long)(sizeof(struct proto_h16_head) + sizeof(int))) {
 		takenMs = *((int *)(req->data() + sizeof(struct proto_h16_head)));	
 	}
 
 	SYSLOG_DEBUG("Echo took %dms", takenMs);
 	if (takenMs > 0) usleep((long)takenMs*1000);
 
-	Message *rsp = Message::create(req->wptr, req->fd, req->flow);
-	memcpy(rsp->data(), req->data(), req->wptr);
+	Message *rsp = Message::create(req->getWptr(), req->fd, req->flow);
+	memcpy(rsp->data(), req->data(), req->getWptr());
 
 	struct proto_h16_head *h = (struct proto_h16_head *)rsp->data();
 	h->cmd = h->cmd + 1;
 
 	/* set response size */
-	rsp->wptr = req->wptr;
+	rsp->setWptr(req->getWptr());
 
 	Message::destroy(req);
 	return sendMessage(rsp);
@@ -60,15 +60,15 @@ int Echo::doForward(Message *req)
 {
 	struct proto_h16_head *h = (struct proto_h16_head *)req->data();
 
-	Message *rsp = Message::create(req->wptr, req->fd, req->flow);
-	memcpy(rsp->data(), req->data(), req->wptr);
+	Message *rsp = Message::create(req->getWptr(), req->fd, req->flow);
+	memcpy(rsp->data(), req->data(), req->getWptr());
 
-	if (req->wptr >= (long)(sizeof(struct proto_h16_head) + 3 * sizeof(int))) {
+	if (req->getWptr() >= (long)(sizeof(struct proto_h16_head) + 3 * sizeof(int))) {
 		if (h->cmd == ECHO_CMD_FORWARD_REQ) {
 			*(int *)(rsp->data() + sizeof(struct proto_h16_head) + 0) = *(int *)(req->data() + sizeof(struct proto_h16_head));
 			*(int *)(rsp->data() + sizeof(struct proto_h16_head) + sizeof(int)) = req->flow;
 			*(int *)(rsp->data() + sizeof(struct proto_h16_head) + 2* sizeof(int)) = req->fd;
-			SYSLOG_DEBUG("Forward from fd=%d flow=%d size=%ld to fd=%d flow=%d", req->fd, req->flow, (long)req->wptr, 5, 1);
+			SYSLOG_DEBUG("Forward from fd=%d flow=%d size=%ld to fd=%d flow=%d", req->fd, req->flow, (long)req->getWptr(), 5, 1);
 
 			struct proto_h16_head *h = (struct proto_h16_head *)rsp->data();
 			h->cmd = ECHO_CMD_MORE_REQ;
@@ -80,7 +80,7 @@ int Echo::doForward(Message *req)
 			int oldFlow = *(int *)(req->data() + sizeof(struct proto_h16_head) + sizeof(int));
 			int oldFd = *(int *)(req->data() + sizeof(struct proto_h16_head) + 2 * sizeof(int));
 			SYSLOG_DEBUG("Forward result from fd=%d flow=%d size=%ld replied to fd=%d flow=%d", \
-				req->fd, req->flow, (long)req->wptr, oldFd, oldFlow);
+				req->fd, req->flow, (long)req->getWptr(), oldFd, oldFlow);
 
 			rsp->fd = oldFd;
 			rsp->flow = oldFlow;
@@ -91,7 +91,7 @@ int Echo::doForward(Message *req)
 	}
 
 	/* set response size */
-	rsp->wptr = req->wptr;
+	rsp->setWptr(req->getWptr());
 
 	Message::destroy(req);
 	return sendMessage(rsp);
@@ -100,21 +100,21 @@ int Echo::doForward(Message *req)
 int Echo::doMore(Message *req)
 {
 	int takenMs = 0;
-	if (req->wptr >= (long)(sizeof(struct proto_h16_head) + sizeof(int))) {
+	if (req->getWptr() >= (long)(sizeof(struct proto_h16_head) + sizeof(int))) {
 		takenMs = *((int *)(req->data() + sizeof(struct proto_h16_head)));	
 	}
 
 	SYSLOG_DEBUG("More took %dms", takenMs);
 	if (takenMs > 0) usleep((long)takenMs*1000);
 
-	Message *rsp = Message::create(req->wptr, req->fd, req->flow);
-	memcpy(rsp->data(), req->data(), req->wptr);
+	Message *rsp = Message::create(req->getWptr(), req->fd, req->flow);
+	memcpy(rsp->data(), req->data(), req->getWptr());
 
 	struct proto_h16_head *h = (struct proto_h16_head *)rsp->data();
 	h->cmd = ECHO_CMD_MORE_RSP;
 
 	/* set response size */
-	rsp->wptr = req->wptr;
+	rsp->setWptr(req->getWptr());
 
 	Message::destroy(req);
 	return sendMessage(rsp);
@@ -123,7 +123,7 @@ int Echo::doMore(Message *req)
 int Echo::onMessage(beyondy::Async::Message *req)
 {
 	SYSLOG_DEBUG("Echo got a message from fd=%d flow=%d msize=%d", \
-		req->fd, req->flow, req->wptr);
+		req->fd, req->flow, req->getWptr());
 	struct proto_h16_head *h = (struct proto_h16_head *)req->data();
 	int retval = 0;
 
@@ -146,7 +146,7 @@ int Echo::onMessage(beyondy::Async::Message *req)
 int Echo::onSent(Message *msg, int status)
 {
 	SYSLOG_DEBUG("Echo message from fd=%d flow=%d msize=%d sent status=%d", \
-		msg->fd, msg->flow, msg->wptr, status);
+		msg->fd, msg->flow, msg->getWptr(), status);
 	Message::destroy(msg);
 	return 0;
 }

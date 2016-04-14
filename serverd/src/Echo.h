@@ -20,7 +20,7 @@ public:
 	
 	virtual ssize_t calcMessageSize(beyondy::Async::Message *msg) const {
 		uint32_t len;
-		memcpy(&len, msg->data() + msg->rptr, sizeof(len));
+		memcpy(&len, msg->data() + msg->getRptr(), sizeof(len));
 
 		if (len < sizeof(proto_h16_head) || len > maxInputSize) {
 			errno = EINVAL;

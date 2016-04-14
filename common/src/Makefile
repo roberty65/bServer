@@ -6,7 +6,8 @@ LDFLAGS  =
 
 DEST = ../lib/libcommon.a
 OBJS = xbs_naddr.o xbs_io.o xbs_socket.o nam2val.o md5.o \
-       slab_cache.o rbtree.o proto_h16.o bprof.o ConfigProperty.o
+       slab_cache.o rbtree.o proto_h16.o bprof.o ConfigProperty.o \
+       MemoryBuffer.o
 #
 # has depends on libxml2 log4cpp
 # log.o xmlconfig.o 

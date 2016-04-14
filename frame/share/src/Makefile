@@ -1,5 +1,5 @@
 
-INC = -I ../../common/include -I ../include
+INC = -I ../../../common/include -I ../include
 LIB = -lpthread
 
 CXXFLAGS = -Wall -g -fPIC -O3
