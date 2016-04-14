@@ -79,7 +79,8 @@ int str2sockaddr(const char *str, int *ptype, struct sockaddr *naddr, socklen_t 
 
 	if (iptr - str > (int)sizeof(host) - 1)
 		return errno = E2BIG, -1;
-	memcpy(host, str, sizeof host);	host[iptr - str] = 0;
+	strncpy(host, str, sizeof host);
+	host[iptr - str] = 0;
 
 	int slen = str + strlen(str) - iptr - 1;
 	if (slen > (int)sizeof(serv) - 1) return errno = E2BIG, -1;

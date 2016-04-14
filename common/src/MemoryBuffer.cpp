@@ -15,7 +15,7 @@ MemoryBuffer::MemoryBuffer()
 }
 
 MemoryBuffer::MemoryBuffer(size_t _bsize)
-	: mbuf(new unsigned char[bsize]), rptr(0), wptr(0),
+	: mbuf(new unsigned char[_bsize]), rptr(0), wptr(0),
 	  bsize(_bsize), autoDelete(true)
 {
 	/* nothing */
