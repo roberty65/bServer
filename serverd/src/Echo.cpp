@@ -16,12 +16,14 @@
 #define ECHO_CMD_MORE_RSP	5
 
 using namespace beyondy::Async;
+extern "C" int getConnector(const char *name);
 
 int Echo::onInit()
 {
 	maxInputSize = 50 * 1024 * 1024;
 	maxOutputSize = 50 * 1024 * 1024;
 
+	dstFlow = getConnector("dst");
 	// TODO: use more general log
 	// after compile the frame with -rdynamic, lib can use tis symbols
 	// SYSLOG_INIT("../logs/business.log", LOG_LEVEL_DEBUG, 10*1024*1024, 10);
@@ -73,8 +75,8 @@ int Echo::doForward(Message *req)
 			struct proto_h16_head *h = (struct proto_h16_head *)rsp->data();
 			h->cmd = ECHO_CMD_MORE_REQ;
 
-			rsp->fd = 5;
-			rsp->flow = 1;
+			rsp->fd = -1;
+			rsp->flow = dstFlow;
 		}
 		else {
 			int oldFlow = *(int *)(req->data() + sizeof(struct proto_h16_head) + sizeof(int));

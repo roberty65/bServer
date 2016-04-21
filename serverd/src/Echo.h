@@ -44,6 +44,7 @@ private:
 private:
 	size_t maxInputSize;
 	size_t maxOutputSize;
+	int dstFlow;
 };
 
 #endif /* __ECHO__H */

@@ -18,7 +18,7 @@ DEST = ../bin/bServerd
 OBJS = main.o
 
 LIBO = ../lib/libEcho.so
-OBJ2 = Echo.o $(FRM_SRC)Log.o $(FSH_SRC)Message.o $(FSH_SRC)Block.o
+OBJ2 = Echo.o 
 
 all: $(DEST) $(LIBO)
 
