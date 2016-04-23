@@ -7,6 +7,7 @@ subdirs = common/src \
 	  serverd/src
 
 targets = all clean distclean
+.PHONY: $(targets)
 
 $(targets):
-	@for dir in $(subdirs); do if make -C $$dir $@; then : else exit; fi; done 
+	@for dir in $(subdirs); do make -C $$dir $@; if test $$? -eq 2; then echo "!!!!! ERROR !!!!!"; exit; fi; done 

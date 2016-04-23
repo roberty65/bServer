@@ -22,6 +22,9 @@ Connector::Connector(int _flow, const char *_address, EventManager *_emgr, Queue
 {
 	strncpy(address, _address, sizeof(address));
 	address[sizeof(address) - 1] = 0;
+
+	gettimeofday(&tsLastClosed, NULL);
+	cntRetryConnect = 0;
 }
 
 int Connector::onWritable(int fd)
@@ -40,6 +43,7 @@ int Connector::onWritable(int fd)
 				return -1;
 			}
 
+			cntRetryConnect = 0;	// reset it
 			status = CONN_ESTABLISHED;
 			if (emgr->modifyConnection(this, EVENT_IN, 0) < 0) {
 				SYSLOG_ERROR("connector(%s) fd=%d flow=%d add EVENT_IN failed: %m", address, fd, flow);
@@ -57,12 +61,15 @@ int Connector::onWritable(int fd)
 int Connector::open()
 {
 	fd = XbsClient(address, O_NONBLOCK, 0);
+	if (++cntRetryConnect >= 5) cntRetryConnect = 0;
+
 	if (fd >= 0) {
 		if (errno == EINPROGRESS) {
 			events = EVENT_OUT;
 			status = CONN_OPENNING;
 		}
 		else {
+			cntRetryConnect = 0;
 			events = EVENT_IN;
 			status = CONN_ESTABLISHED;
 		}
@@ -74,6 +81,10 @@ int Connector::open()
 	SYSLOG_DEBUG("connector(%s) open OK, fd=%d flow=%d, status=%d", address, fd, flow, (int)status);
 	int retval = emgr->addConnection(this, events);
 	if (retval < 0) {
+		// TODO: 
+		::close(fd); fd = -1;
+		status = CONN_CLOSE;
+
 		SYSLOG_ERROR("connector(%s) addConnection got error: %m", address);
 		return retval;
 	}
@@ -100,7 +111,10 @@ int Connector::destroy()
 	::close(fd); fd = -1;
 	status = CONN_CLOSE;
 
-	return 0;	
+	// re-connect sometime later
+	gettimeofday(&tsLastClosed, NULL);
+
+	return 0;
 }
 
 int Connector::sendMessage(Message *msg)

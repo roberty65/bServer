@@ -40,8 +40,7 @@ static void *bprof_outer(void *p)
 		for (size_t i = 0; i < bp_size; ++i) {
 			cc_items[i].count = bk_items[i].count - cc_items[i].count;
 			cc_items[i].usec = bk_items[i].usec - cc_items[i].usec;
-			unsigned long avg = cc_items[i].count ? cc_items[i].usec/cc_items[i].count
-							      : -1UL;
+			unsigned long avg = cc_items[i].count ? cc_items[i].usec/cc_items[i].count : 0;
 			offset += snprintf(ff_buf + offset, ff_size - offset,
 					"%32s cnt=%lu total-usec=%lu avg=%lu\n",  	
 					bp_items[i].name, cc_items[i].count, 

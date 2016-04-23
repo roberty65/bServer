@@ -21,6 +21,8 @@
 namespace beyondy {
 namespace Async {
 
+#define TV2MS(t1,t2) (((t2).tv_sec - (t1).tv_sec) * 1000 + ((t2).tv_usec - (t1).tv_usec) / 1000)
+
 EventManager::EventManager(Queue<Message> *_outQueue, int _esize)
 	: epoll_fd(-1), event_next(0), event_total(0), epoll_size(_esize), epoll_events(NULL),
 	  outQueue(_outQueue)
@@ -46,6 +48,7 @@ EventManager::EventManager(Queue<Message> *_outQueue, int _esize)
 	event_total = 0;
 
 	INIT_LIST_HEAD(&lruHead);
+	INIT_LIST_HEAD(&connectorsHead);
 		
 	struct rlimit r0;
 	int retval = getrlimit(RLIMIT_NOFILE, &r0);
@@ -57,7 +60,8 @@ EventManager::EventManager(Queue<Message> *_outQueue, int _esize)
 	flowRoot.rb_node = NULL;
 
 	perCheckOutQueue = 100;
-	connectionMaxIdle = 5;
+	connectionMaxIdle = 5 * 1000;
+	reconnectDelay = 2 * 1000;	// will delay 2, 4, 6, 8, 10
 }
 
 int EventManager::addListener(const char *address, Queue<Message> *inQueue, Processor *processor, int maxActive)
@@ -88,6 +92,8 @@ int EventManager::addConnector(const char *address, Queue<Message> *inQueue, Pro
 	}
 
 	mapFlow(flow, connector);
+	_list_add_tail(&connector->connectorsEntry, &connectorsHead);
+
 	return flow;
 }
 
@@ -309,12 +315,13 @@ void EventManager::dispatchOutMessage()
 void EventManager::checkTimeout()
 {
 	BPROF_TRACE(BPT_EM_CHKTIMEOUT)
-	time_t tNow = time(NULL);
+	struct timeval tNow;
 	struct list_head *pl, *pn;
 
+	gettimeofday(&tNow, NULL);
 	list_for_each_safe(pl, pn, &lruHead) {
 		Connection *connection = list_entry(pl, Connection, lruEntry);
-		if (tNow - connection->tsLastRead.tv_sec > connectionMaxIdle) {
+		if (TV2MS(connection->tsLastRead, tNow) > connectionMaxIdle) {
 			SYSLOG_ERROR("connection fd=%d flow=%d timed out. close it now.", connection->fd, connection->flow);
 			connection->onError(connection->fd);
 			continue;
@@ -324,6 +331,29 @@ void EventManager::checkTimeout()
 		// so no need check
 		break;
 	}
+}
+
+void EventManager::reconnectWhenNecessary()
+{
+	struct timeval tNow;
+	struct list_head *pl, *pn;
+
+	gettimeofday(&tNow, NULL);
+	list_for_each_safe(pl, pn, &connectorsHead) {
+		Connector *connector = list_entry(pl, Connector, connectorsEntry);
+		if (connector->getStatus() == Connector::CONN_CLOSE
+				&& TV2MS(connector->tsLastClosed, tNow) > (connector->cntRetryConnect + 1) * reconnectDelay) {
+			SYSLOG_ERROR("connector flow=%d is closed, re-connecting it", connector->flow);
+			if (connector->open() < 0) {
+				SYSLOG_WARN("re-connecting for low=%ld failed: %m", connector->flow);
+
+				// retry next time but update tsLastClosed to avoid connect too often
+			}
+
+		}
+	}
+
+	return;
 }
 
 int EventManager::start()
@@ -343,6 +373,9 @@ int EventManager::start()
 
 		// timeout check
 		checkTimeout();
+
+		// re-connect for connectors if they are broken
+		reconnectWhenNecessary();
 	}
 
 	return 0;

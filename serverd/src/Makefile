@@ -1,3 +1,5 @@
+include ../../Makefile.rules
+
 COM_INC=../../common/include
 COM_SRC=../../common/src/
 COM_LIB=../../common/lib/
@@ -11,24 +13,22 @@ FRM_SRC=../../frame/main/
 INC = -I $(COM_INC) -I $(FSH_INC) -I $(FRM_SRC)
 LIB = -L $(FRM_SRC) -lFrame -L $(FSH_LIB) -lProcessor -L $(COM_LIB) -lcommon -ldl -lpthread
 
-CXXFLAGS = -Wall -g -fPIC -O3 -DNOBPROF
-LDFLAGS  =
-
 DEST = ../bin/bServerd
 OBJS = main.o
 
 LIBO = ../lib/libEcho.so
 OBJ2 = Echo.o 
 
-all: $(DEST) $(LIBO)
+DEPS = $(patsubst %.o, .%.d, $(OBJS) $(OBJ2))
+
+.PHONY: all clean distclean mkdirs
+all: mkdirs $(DEST) $(LIBO)
 
 $(DEST): $(OBJS)
-	mkdir -p ../bin
-	g++ -o $@ -rdynamic $(LDFLAGS) $(OBJS) $(DEPS) $(LIB)
-	#g++ -o $@ $(OBJS) $(DEPS) $(LIB) #-Wl,--dynamic-list=export.syms
+	g++ -o $@ -rdynamic $(LDFLAGS) $(OBJS) $(LIB)
+	#g++ -o $@ $(OBJS) $(LIB) #-Wl,--dynamic-list=export.syms
 
 $(LIBO): $(OBJ2)
-	mkdir -p ../lib
 	g++ -o $@ -shared $(LDFLAGS) $(OBJ2) #-ldl
 
 .cpp.o:
@@ -36,7 +36,10 @@ $(LIBO): $(OBJ2)
 .c.o:
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 
+mkdirs:
+	mkdir -p ../bin ../lib ../logs
 clean:
 	rm -f $(OBJS) $(OBJ2) *~ *.s *.ii *.i
 distclean: clean
-	rm -f $(DEST) $(LIBO) ../logs/*.log
+	rm -f $(DEPS) $(DEST) $(LIBO) ../logs/*.log
+-include $(DEPS)

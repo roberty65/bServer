@@ -122,10 +122,10 @@ int XbsSetReuse (int fd, int reuse)
 	int address = (reuse & XBS_REUSE_ADDR) ? 1 : 0;
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &address, sizeof(address)) < 0) return -1;
 	
-#ifdef SO_REUSEPORT
-	int port = (reuse & XBS_REUSE_PORT) ? 1 : 0;
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &port, sizeof(port)) < 0) return -1;
-#endif /* SO_REUSEPORT */
+//#ifdef SO_REUSEPORT
+//	int port = (reuse & XBS_REUSE_PORT) ? 1 : 0;
+//	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &port, sizeof(port)) < 0) return -1;
+//#endif /* SO_REUSEPORT */
 
 	return 0; 
 }

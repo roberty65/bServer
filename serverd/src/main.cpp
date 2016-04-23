@@ -38,6 +38,7 @@ static int systemOutQueueSize = 9000;
 static const char *businessProcessor = NULL;
 
 static int connectionIdleTimeout = 5;
+static int reconnectDelay = 2;
 static int connectionOutQueueSize = 10;
 
 struct ConnectorInfo {
@@ -98,6 +99,7 @@ static int loadConfig(const char *file)
 	if ((businessProcessor = strdup(val)) == NULL) return -1;
 
 	connectionIdleTimeout = cfp.getInt("connectionIdleTimeout", 10);
+	reconnectDelay = cfp.getInt("reconnectDelay", 2);
 
 	connectorHelloInterval = cfp.getInt("connectorHelloInterval", 3);
 	std::set<std::string> ctrs = cfp.getChildren("connector");
@@ -137,6 +139,13 @@ Processor *loadProcessor(const char *lib)
 	}
 
 	return processor;
+}
+
+static void sigExit(int sig)
+{
+	// TODO:
+	SYSLOG_ERROR("exit by sinal %d", sig);
+	exit(sig);
 }
 
 static void usage(const char *p)
@@ -198,11 +207,15 @@ int main(int argc, char **argv)
 		if (fork() != 0) exit(0); // exit if not child
 		setsid();
 
+		struct sigaction act;
+		act.sa_flags = 0;
+		act.sa_handler = sigExit;
+		sigaction(SIGTERM, &act, NULL);
+		sigaction(SIGINT, &act, NULL);
+
 		signal(SIGHUP, SIG_IGN);
-		signal(SIGINT, SIG_IGN);
 		signal(SIGQUIT, SIG_IGN);
 		signal(SIGPIPE, SIG_IGN);
-		signal(SIGTERM, SIG_IGN);
 		signal(SIGCHLD, SIG_IGN);
 		signal(SIGTSTP, SIG_IGN);
 		signal(SIGTTIN, SIG_IGN);
@@ -242,6 +255,7 @@ int main(int argc, char **argv)
 
 	EventManager *emgr = new EventManager(outQ, 1024);
 	emgr->setConnectionMaxIdle(connectionIdleTimeout);
+	emgr->setReconnectDelay(reconnectDelay);
 
 	connectionOutQueueSize = 10;
 	int retval = emgr->addListener(listenAddress, inQ, processor, listenMaxConnection);

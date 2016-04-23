@@ -70,7 +70,7 @@ int Echo::doForward(Message *req)
 			*(int *)(rsp->data() + sizeof(struct proto_h16_head) + 0) = *(int *)(req->data() + sizeof(struct proto_h16_head));
 			*(int *)(rsp->data() + sizeof(struct proto_h16_head) + sizeof(int)) = req->flow;
 			*(int *)(rsp->data() + sizeof(struct proto_h16_head) + 2* sizeof(int)) = req->fd;
-			SYSLOG_DEBUG("Forward from fd=%d flow=%d size=%ld to fd=%d flow=%d", req->fd, req->flow, (long)req->getWptr(), 5, 1);
+			SYSLOG_DEBUG("Forward from fd=%d flow=%d size=%ld to flow=%d", req->fd, req->flow, (long)req->getWptr(), dstFlow);
 
 			struct proto_h16_head *h = (struct proto_h16_head *)rsp->data();
 			h->cmd = ECHO_CMD_MORE_REQ;

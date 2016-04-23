@@ -1,13 +1,14 @@
+include  ../../Makefile.rules
 
 INC = -I ../../common/include -I ../share/include
 LIB = -lpthread
 
-CXXFLAGS = -Wall -g -fPIC -O3 -DNOBPROF
-LDFLAGS  =
-
 OBJS = Log.o EventHandler.o Connection.o Connector.o Listener.o EventManager.o MtWorker.o Processor.o
 DEST = ./libFrame.a
 
+DEPS = $(patsubst %.o, .%.d, $(OBJS))
+
+.PHONY: all clean distclean mkdirs
 all: $(DEST)
 
 $(DEST): $(OBJS)
@@ -18,7 +19,10 @@ $(DEST): $(OBJS)
 .c.o:
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 
+mkdirs:
+	echo
 clean:
 	rm -f $(OBJS) *~ *.s *.ii *.i
 distclean: clean
-	rm -f $(DEST)
+	rm -f $(DEST) $(DEPS)
+-include $(DEPS)

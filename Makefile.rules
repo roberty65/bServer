@@ -1,0 +1,29 @@
+#
+# some global settins
+#
+CFLAGS = -Wall -MMD -MF ".$(basename $@).d" -fPIC
+CXXFLAGS = -Wall -MMD -MF ".$(basename $@).d" -fPIC
+LDFLAGS  =
+
+#
+# enable BPROF or not
+#
+ifeq (1,$(BPROF))
+CFLAGS += -DBPROF=1
+CXXFLAGS += -DBPROF=1
+endif
+
+#
+# debug version or release version
+#
+ifeq (1,$(DEBUG))
+CFLAGS += -g
+CXXFLAGS += -g
+else
+CFLAGS += -O3
+CXXFLAGS += -O3
+endif
+
+#
+# TODO: some common include/libaries
+#

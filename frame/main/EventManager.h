@@ -26,6 +26,7 @@ public:
 	EventManager(Queue<Message> *outQueue, int esize);
 public:
 	// must be called be start is called by ONE thread
+	// No deletion
 	int addListener(const char *address, Queue<Message> *inQueue, Processor *processor, int maxActive);
 	int addConnector(const char *address, Queue<Message> *inQueue, Processor *process, int openImmediately);
 private:
@@ -48,9 +49,11 @@ private:
 	Connection *flow2Connection(int flow);
 	void dispatchOutMessage();
 	void checkTimeout();
+	void reconnectWhenNecessary();
 public:
 	int start();
-	void setConnectionMaxIdle(int seconds) { this->connectionMaxIdle = seconds; }
+	void setConnectionMaxIdle(int seconds) { this->connectionMaxIdle = seconds * 1000; }
+	void setReconnectDelay(int seconds) { this->reconnectDelay = seconds * 1000; }
 private:
 	int epoll_fd;
 
@@ -64,6 +67,7 @@ private:
 	
 	/* LRU list */
 	struct list_head lruHead;
+	struct list_head connectorsHead;
 	
 	int next_flow;
 	struct rb_root flowRoot;	/* flow => connection */
@@ -72,6 +76,7 @@ private:
 
 	int perCheckOutQueue;
 	int connectionMaxIdle;		/* seconds */
+	int reconnectDelay;		/* second */
 	
 };
 } /* Async */

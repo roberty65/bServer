@@ -3,10 +3,11 @@
 
 #include <sys/time.h>
 
-#ifndef NOBPROF
+#if BPROF == 1
 #define BPROF_INIT(items,size) beyondy::bprof_init(items, size)
 #define BPROF_EXIT() beyondy::bprof_exit()
 #define BPROF_TRACE(id)	beyondy::bprof_guard __bprof_guard(id);
+
 #else
 #define BPROF_INIT(items,size) (0)
 #define BPROF_EXIT() do {} while(0)

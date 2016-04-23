@@ -1,3 +1,5 @@
+include  ../../../Makefile.rules
+
 COM_INC=../../../common/include
 COM_SRC=../../../common/src/
 COM_LIB=../../../common/lib/
@@ -23,23 +25,26 @@ OBJ2 = mtServer.o
 DST3 = ../bin/otEchod
 OBJ3 = otEchod.o
 
+DEPS = $(patsubst %.o, .%.d, $(OBJS) $(OBJ2) $(OBJ3))
+
+.PHONY: all clean distclean mkdirs
 all: $(DEST) $(DST2) $(DST3)
 
 $(DEST): $(OBJS)
-	mkdir -p ../bin
 	g++ -o $@ $(LDFLAGS) $(OBJS) $(LIB)
 $(DST2): $(OBJ2)
-	mkdir -p ../bin
 	g++ -o $@ $(OBJ2) $(LDFLAGS) -L $(COM_LIB) -lcommon -lpthread
 $(DST3): $(OBJ3)
-	mkdir -p ../bin
 	g++ -o $@ $(OBJ3) $(LDFLAGS) -L $(COM_LIB) -lcommon
 .cpp.o:
 	g++ -c -o $@ $(INC) $(CXXFLAGS) $<
 .c.o:
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 
+mkdirs:
+	mkdir -p ../bin
 clean:
 	rm -f $(OBJS) $(OBJ2) $(OBJ3) *~ *.s *.ii *.i
 distclean: clean
-	rm -f $(DEST) $(DST2) $(DST3) ../logs/server.log
+	rm -f $(DEPS) $(DEST) $(DST2) $(DST3) ../logs/server.log
+-include $(DEPS)

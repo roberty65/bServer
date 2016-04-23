@@ -1,5 +1,6 @@
 /* Message.h
  * Copyright by Beyondy.c.w 2002-2020
+ *
 **/
 #ifndef __MESSAGE__H
 #define __MESSAGE__H
