@@ -34,12 +34,14 @@ static int listenMaxConnection = 2000;
 static int systemThreadCount = 100;
 static int systemInQueueSize = 8000;
 static int systemOutQueueSize = 9000;
+static int systemInMessageExpire = 30;
+static int systemOutMessageExpire = 30;
 
 static const char *businessProcessor = NULL;
 
 static int connectionIdleTimeout = 5;
 static int reconnectDelay = 2;
-static int connectionOutQueueSize = 10;
+static int connectionOutQueueSize = 100;
 
 struct ConnectorInfo {
 	const char *address;
@@ -49,7 +51,7 @@ struct ConnectorInfo {
 typedef std::map<std::string, ConnectorInfo> ConnectorMap;
 static ConnectorMap connectors;
 
-static int connectorHelloInterval = 5;
+static int connectorHelloInterval = 3;
 
 // if need, 
 // must be called in Processor->onInit
@@ -94,14 +96,18 @@ static int loadConfig(const char *file)
 	systemThreadCount = cfp.getInt("systemThreadCount", 8);
 	systemInQueueSize = cfp.getInt("systemInQueueSize", 8192);
 	systemOutQueueSize = cfp.getInt("systemOutQueueSize", 16384);
-	
+	systemInMessageExpire = cfp.getInt("systemInMessageExpire", 30);
+	systemOutMessageExpire = cfp.getInt("systemOutMessageExpire", 30);
+
 	val = cfp.getString("businessProcessor", "../lib/libEcho.so");
 	if ((businessProcessor = strdup(val)) == NULL) return -1;
 
 	connectionIdleTimeout = cfp.getInt("connectionIdleTimeout", 10);
-	reconnectDelay = cfp.getInt("reconnectDelay", 2);
+	connectionOutQueueSize = cfp.getInt("connectionOutQueueSize", 100);
 
 	connectorHelloInterval = cfp.getInt("connectorHelloInterval", 3);
+	reconnectDelay = cfp.getInt("reconnectDelay", 2);
+
 	std::set<std::string> ctrs = cfp.getChildren("connector");
 	for (std::set<std::string>::iterator iter = ctrs.begin();
 		iter != ctrs.end();
@@ -254,10 +260,14 @@ int main(int argc, char **argv)
 	processor->setSendFunc(async_send_delegator, outQ);
 
 	EventManager *emgr = new EventManager(outQ, 1024);
+	emgr->setMessageExpire(systemInMessageExpire, systemOutMessageExpire);
+
 	emgr->setConnectionMaxIdle(connectionIdleTimeout);
+	emgr->setConnectionOutQueueSize(connectionOutQueueSize);
+
+	emgr->setHelloInterval(connectorHelloInterval);
 	emgr->setReconnectDelay(reconnectDelay);
 
-	connectionOutQueueSize = 10;
 	int retval = emgr->addListener(listenAddress, inQ, processor, listenMaxConnection);
 	if (retval < 0) {
 		SYSLOG_FATAL("addListener at %s failed", listenAddress);
@@ -272,7 +282,7 @@ int main(int argc, char **argv)
 		}
 	
 		iter->second.flow = cid;
-		SYSLOG_DEBUG("connector=%s, interval=%d, flow=%d", iter->first.c_str(), connectorHelloInterval, cid);
+		SYSLOG_DEBUG("connector=%s, flow=%d", iter->first.c_str(), cid);
 	}
 
 	// init here for it may call add/getConnector

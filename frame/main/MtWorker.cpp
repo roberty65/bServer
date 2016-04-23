@@ -59,6 +59,7 @@ void MtWorker::workerEntry()
 			continue;
 		}
 
+		gettimeofday(&msg->ts_dequeue, NULL);
 		proc->onMessage(msg);
 	}
 }

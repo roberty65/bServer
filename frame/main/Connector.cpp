@@ -97,13 +97,12 @@ int Connector::destroy()
 	SYSLOG_ERROR("connector(%s) is cleared, outQ-size=%d", address, (outMsg == NULL ? 0 : 1) + 0);
 
 	if (outMsg != NULL) {
-		// TODO: push back to the top!!!
 		outQueue->push_front(outMsg);
 		outMsg = NULL;
 	}
 
 	// keep other message in the queue
-	// TODO: check timeout? not here?
+	// Need check timeout in the main-loop
 
 	// DO NOT UNMAP FLOW
 	emgr->deleteConnection(this);
@@ -129,8 +128,15 @@ int Connector::sendMessage(Message *msg)
 	}
 
 	if (status == CONN_OPENNING) {
-		SYSLOG_DEBUG("connector(%s) is openning when sendMessage", address);
-		outQueue->push_back(msg);
+		if (outQueue->size() >= (size_t)emgr->getConnectionOutQueueSize()) {
+			SYSLOG_ERROR("connector fd=%d flow=%d sendMessge over-flow, out-queue-size=%ld", fd, flow, (long)outQueue->size());
+			proc->onSent(msg, SS_QUEUE_FULL);
+		}
+		else {
+			SYSLOG_DEBUG("connector(%s) is openning when sendMessage", address);
+			outQueue->push_back(msg);
+		}
+
 		return 0;
 	}
 

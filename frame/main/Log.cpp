@@ -11,6 +11,8 @@
 
 #include "Log.h"
 
+const char *strLevels[] = { "UNKN", "FATAL", "ERROR", "WARN", "INFO", "DEBUG" };
+
 // global log instance which must be initialized before any log calls
 LogHandle *sysLogHandle = NULL;
 
@@ -30,10 +32,12 @@ int LogHandle::doLog(int level, const char *fmt...)
 
 	gettimeofday(&ts, NULL);
 	ptm = localtime_r(&ts.tv_sec, &tmbuf);
-	int mlen = snprintf(buf, sizeof buf, "%04d-%03d-%02dT%02d:%02d:%02d.%03d ",
+	int mlen = snprintf(buf, sizeof buf, "%04d-%03d-%02dT%02d:%02d:%02d.%03d %s ",
 		ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday,
 		ptm->tm_hour, ptm->tm_min, ptm->tm_sec,
-		(int)(ts.tv_usec / 1000));
+		(int)(ts.tv_usec / 1000),
+		level >= LOG_LEVEL_FATAL && level <= LOG_LEVEL_DEBUG
+			? strLevels[level] : strLevels[0]);
 	
 	va_start(ap, fmt);
 	int slen = vsnprintf(buf + mlen, sizeof(buf) - mlen, fmt, ap);

@@ -25,11 +25,11 @@ DEPS = $(patsubst %.o, .%.d, $(OBJS) $(OBJ2))
 all: mkdirs $(DEST) $(LIBO)
 
 $(DEST): $(OBJS)
-	g++ -o $@ -rdynamic $(LDFLAGS) $(OBJS) $(LIB)
+	g++ -o $@ -rdynamic $(CXXFLAGS) $(LDFLAGS) $(OBJS) $(LIB)
 	#g++ -o $@ $(OBJS) $(LIB) #-Wl,--dynamic-list=export.syms
 
 $(LIBO): $(OBJ2)
-	g++ -o $@ -shared $(LDFLAGS) $(OBJ2) #-ldl
+	g++ -o $@ -shared $(CXXFLAGS) $(LDFLAGS) $(OBJ2) #-ldl
 
 .cpp.o:
 	g++ -c -o $@ $(INC) $(CXXFLAGS) $<

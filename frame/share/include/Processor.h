@@ -31,6 +31,7 @@ public:
 	virtual int onMessage(Message *msg) =  0;
 	// NOTE!!! this callback will be called in communication-thread(s)
 	// DO LESS AS CAN AS POSSIBLE
+	// msg->ts_process_end only set when status is OK
 	virtual int onSent(Message *msg, int status) = 0;
 	// will append message into outQueue
 	int sendMessage(Message *msg) { if (sf != NULL) return (*sf)(msg, data); else return -1; }

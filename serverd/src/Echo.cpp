@@ -55,7 +55,12 @@ int Echo::doEcho(Message *req)
 	rsp->setWptr(req->getWptr());
 
 	Message::destroy(req);
-	return sendMessage(rsp);
+	if (sendMessage(rsp) < 0) {
+		Message::destroy(rsp);
+		return -1;
+	}
+
+	return 0;
 }
 
 int Echo::doForward(Message *req)
@@ -96,7 +101,12 @@ int Echo::doForward(Message *req)
 	rsp->setWptr(req->getWptr());
 
 	Message::destroy(req);
-	return sendMessage(rsp);
+	if (sendMessage(rsp) < 0) {
+		Message::destroy(rsp);
+		return -1;
+	}
+
+	return 0;
 }
 
 int Echo::doMore(Message *req)
@@ -119,13 +129,21 @@ int Echo::doMore(Message *req)
 	rsp->setWptr(req->getWptr());
 
 	Message::destroy(req);
-	return sendMessage(rsp);
+	if (sendMessage(rsp) < 0) {
+		Message::destroy(rsp);
+		return -1;
+	}
+
+	return 0;
 }
 
 int Echo::onMessage(beyondy::Async::Message *req)
 {
-	SYSLOG_DEBUG("Echo got a message from fd=%d flow=%d msize=%d", \
-		req->fd, req->flow, req->getWptr());
+	SYSLOG_DEBUG("Echo got a message from fd=%d flow=%d msize=%d, byte0=%ld,%d, enQ=%ld,%d, deQ=%ld,%ld", \
+		req->fd, req->flow, req->getWptr(),
+		req->ts_byte_first.tv_sec, req->ts_byte_first.tv_usec,
+		req->ts_enqueue.tv_sec, req->ts_enqueue.tv_usec,
+		req->ts_dequeue.tv_sec, req->ts_dequeue.tv_usec);
 	struct proto_h16_head *h = (struct proto_h16_head *)req->data();
 	int retval = 0;
 
@@ -147,8 +165,12 @@ int Echo::onMessage(beyondy::Async::Message *req)
 
 int Echo::onSent(Message *msg, int status)
 {
-	SYSLOG_DEBUG("Echo message from fd=%d flow=%d msize=%d sent status=%d", \
-		msg->fd, msg->flow, msg->getWptr(), status);
+	SYSLOG_DEBUG("Echo message from fd=%d flow=%d msize=%d sent status=%d, enQ=%ld,%ld, deQ=%ld,%ld, byte0=%ld,%ld, sent=%ld,%ld", \
+		msg->fd, msg->flow, msg->getWptr(), status,
+		msg->ts_enqueue.tv_sec, msg->ts_enqueue.tv_usec,
+		msg->ts_dequeue.tv_sec, msg->ts_dequeue.tv_usec,
+		msg->ts_byte_first.tv_sec, msg->ts_byte_first.tv_usec,
+		msg->ts_process_end.tv_sec, msg->ts_process_end.tv_usec);
 	Message::destroy(msg);
 	return 0;
 }

@@ -4,9 +4,14 @@
 #include "EventManager.h"
 #include "MtWorker.h"
 #include "Log.h"
-#include "Echo.h"
+#include "../../../serverd/src/Echo.h"
 
 using namespace beyondy::Async;
+extern "C" int getConnector(const char *name)
+{
+	// TODO:
+	return -1;
+}
 
 int main(int argc, char **argv)
 {

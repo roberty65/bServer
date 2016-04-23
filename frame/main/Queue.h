@@ -23,6 +23,7 @@ private:
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
 
+	size_t maxSize;
 	std::queue<T*> queue;
 };
 
@@ -31,18 +32,23 @@ Queue<T>::Queue(size_t size)
 {
 	pthread_mutex_init(&lock, NULL);
 	pthread_cond_init(&cond, NULL);
+
+	maxSize = size;
 }
 
 template <class T>
 int Queue<T>::push(T *obj)
 {
+	int retval = 0;
+
 	pthread_mutex_lock(&lock);
-	queue.push(obj);
+	if (queue.size() < maxSize) queue.push(obj);
+	else retval = -1;
 
 	pthread_cond_signal(&cond);
 	pthread_mutex_unlock(&lock);
 
-	return 0;
+	return retval;
 }
 
 template <class T>

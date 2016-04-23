@@ -21,8 +21,6 @@
 namespace beyondy {
 namespace Async {
 
-#define TV2MS(t1,t2) (((t2).tv_sec - (t1).tv_sec) * 1000 + ((t2).tv_usec - (t1).tv_usec) / 1000)
-
 EventManager::EventManager(Queue<Message> *_outQueue, int _esize)
 	: epoll_fd(-1), event_next(0), event_total(0), epoll_size(_esize), epoll_events(NULL),
 	  outQueue(_outQueue)
@@ -294,7 +292,9 @@ void EventManager::dispatchOutMessage()
 		if (msg == NULL)
 			break;
 
+		gettimeofday(&msg->ts_dequeue, NULL);
 		int flow = msg->flow;
+
 		Connection *connection = flow2Connection(flow);
 		if (connection == NULL) {
 			SYSLOG_ERROR("can not find connection for fd=%d flow=%d discard it", msg->fd, msg->flow);
@@ -328,7 +328,7 @@ void EventManager::checkTimeout()
 		}
 
 		// the rest should be more active
-		// so no need check
+		// so no need check this time.
 		break;
 	}
 }
@@ -346,11 +346,12 @@ void EventManager::reconnectWhenNecessary()
 			SYSLOG_ERROR("connector flow=%d is closed, re-connecting it", connector->flow);
 			if (connector->open() < 0) {
 				SYSLOG_WARN("re-connecting for low=%ld failed: %m", connector->flow);
-
 				// retry next time but update tsLastClosed to avoid connect too often
 			}
 
 		}
+
+		connector->checkMessageExpiration();
 	}
 
 	return;

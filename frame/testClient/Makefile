@@ -31,13 +31,13 @@ DEPS = $(patsubst %.o, .%.d, $(OBJS) $(OBJ2) $(OBJ3) $(OBJ4))
 all: $(DEST) $(DST2) $(DST3) $(DST4)
 
 $(DEST): $(OBJS)
-	g++ -o $@ $(LDFLAGS) $(OBJS) $(LIB)
+	g++ -o $@ $(CXXFLAGS) $(LDFLAGS) $(OBJS) $(LIB)
 $(DST2): $(OBJ2)
-	g++ -o $@ $(LDFLAGS) $(OBJ2) $(LIB)
+	g++ -o $@ $(CXXFLAGS) $(LDFLAGS) $(OBJ2) $(LIB)
 $(DST3): $(OBJ3)
-	g++ -o $@ $(LDFLAGS) $(OBJ3) $(LIB)
+	g++ -o $@ $(CXXFLAGS) $(LDFLAGS) $(OBJ3) $(LIB)
 $(DST4): $(OBJ4)
-	g++ -o $@ $(LDFLAGS) $(OBJ4) $(LIB) -L $(FSH_LIB) -lProcessor
+	g++ -o $@ $(CXXFLAGS) $(LDFLAGS) $(OBJ4) $(LIB) -L $(FSH_LIB) -lProcessor
 .cpp.o:
 	g++ -c -o $@ $(INC) $(CXXFLAGS) $<
 .c.o:

@@ -28,6 +28,7 @@ public:
 	virtual int onError(int fd);
 public:
 	virtual int sendMessage(Message *msg);
+	void checkMessageExpiration();
 public:
 	virtual int destroy();
 private:
@@ -42,8 +43,8 @@ protected:
 	Message *inMsg;
 	Queue<Message> *inQueue;	// shared
 
-	Message *outMsg;
-	std::deque<Message*> *outQueue;	// delicated for out messages(NO NEED LOCK?)
+	Message *outMsg;		// message being sending out
+	std::deque<Message*> *outQueue;	// delicated for out messages(NO NEED LOCK)
 
 	EventManager *emgr;
 	Processor *proc;

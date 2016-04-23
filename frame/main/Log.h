@@ -17,6 +17,47 @@
 #define SYSLOG_ERROR(s...)	SYSLOG_DOLOG(LOG_LEVEL_ERROR, s)
 #define SYSLOG_FATAL(s...)	SYSLOG_DOLOG(LOG_LEVEL_FATAL, s)
 
+// TODO: more specific logs
+
+//
+// APP LOGS
+//
+#define APPLOG_INIT(path, level, maxFileSize, maxBackup) do {} while(0)
+#define APPLOG_DOLOG(level, s...) do { } while (0)
+#define APPLOG_EXIT() do {} while(0)
+
+#define APPLOG_DEBUG(s...)	APPLOG_DOLOG(LOG_LEVEL_DEBUG, s)
+#define APPLOG_INFO(s...)	APPLOG_DOLOG(LOG_LEVEL_DEBUG, s)
+#define APPLOG_WARN(s...)	APPLOG_DOLOG(LOG_LEVEL_DEBUG, s)
+#define APPLOG_ERROR(s...)	APPLOG_DOLOG(LOG_LEVEL_DEBUG, s)
+#define APPLOG_FATAL(s...)	APPLOG_DOLOG(LOG_LEVEL_DEBUG, s)
+
+//
+// Audit logs
+//
+#define AUDIT_INIT(path, level, maxFileSize, maxBackup) do {} while(0)
+#define AUDIT_DOLOG(level, s...) do {} while(0)
+#define AUDIT_EXIT() do {} while(0)
+
+#define AUDIT_DEBUG(s...)
+#define AUDIT_INFO(s...)
+#define AUDIT_WARN(s...)
+#define AUDIT_ERROR(s...)
+#define AUDIT_FATAL(s...)
+
+//
+// fatal exceptions, dedicated logs to be keep longer
+//
+#define EXCEPT_INIT(path, level, maxFileSize, maxBackup) do {} while(0)
+#define EXCEPT_DOLOG(path, level) do {} while(0)
+#define EXCEPT_EXIT() do {} while(0)
+
+#define EXCEPT_DEBUG(s...)
+#define EXCEPT_INFO(s...)
+#define EXCEPT_WARN(s...)
+#define EXCEPT_ERROR(s...)
+#define EXCEPT_FATAL(s...)
+
 class LogHandle {
 public:
 	LogHandle(const char *basePath, int logLevel, long maxFileSize, long maxBackup);

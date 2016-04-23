@@ -52,8 +52,16 @@ private:
 	void reconnectWhenNecessary();
 public:
 	int start();
+	// some settings
+	// TODO: a more general config properties
+	void setMessageExpire(int inExpire, int outExpire) { inMessageExpire = inExpire * 1000, outMessageExpire = outExpire * 1000; }
 	void setConnectionMaxIdle(int seconds) { this->connectionMaxIdle = seconds * 1000; }
+	void setConnectionOutQueueSize(int size) { this->connectionOutQueueSize = size; }
+	void setHelloInterval(int seconds) { this->helloInterval = seconds * 1000; }
 	void setReconnectDelay(int seconds) { this->reconnectDelay = seconds * 1000; }
+
+	int getOutMessageExpire() const { return outMessageExpire; }
+	int getConnectionOutQueueSize() const { return connectionOutQueueSize; }
 private:
 	int epoll_fd;
 
@@ -73,11 +81,16 @@ private:
 	struct rb_root flowRoot;	/* flow => connection */
 
 	int isRunning;
-
 	int perCheckOutQueue;
-	int connectionMaxIdle;		/* seconds */
-	int reconnectDelay;		/* second */
-	
+
+	int inMessageExpire;		/* milliseconds */
+	int outMessageExpire;		/* milliseconds */
+
+	int connectionMaxIdle;		/* milliseconds */
+	int connectionOutQueueSize;
+
+	int helloInterval;		/* milliseconds, for Connector only */
+	int reconnectDelay;		/* milliseconds */
 };
 } /* Async */
 }/* beyondy */
