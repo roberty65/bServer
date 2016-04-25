@@ -138,3 +138,8 @@ set 8w #/s) 18,
 27,same as #26. ERROR-level
     send   710870 71085.42pkg/s 72.79MB/s recv   711150 71113.42pkg/s 72.82MB/s
     bServer 147%CPU, testBenchmark 20%
+28,i7-5500
+   bServer 110%CPU, testTool: 70%CPU
+   $ ./testBenchmark -c 0 -A -t 10 -s 1024 tcp://127.0.0.1:5010 
+   20:37:06 send  1791391 179116.28pkg/s 183.42MB/s recv  1772715 177248.92pkg/s 181.50MB/s
+ 

@@ -185,7 +185,7 @@ int Connection::sendMessage(Message *msg)
 		ssize_t wlen = writeN(msg, rest);
 
 		if ((size_t)wlen == rest) {
-			SYSLOG_ERROR("connection fd=%d flow=%d sendMessage %ld bytes done", fd, flow, (long)rest);
+			SYSLOG_DEBUG("connection fd=%d flow=%d sendMessage %ld bytes done", fd, flow, (long)rest);
 
 			gettimeofday(&msg->ts_process_end, NULL);
 			proc->onSent(msg, SS_OK);
@@ -216,7 +216,7 @@ int Connection::sendMessage(Message *msg)
 		outQueue->push_back(msg);
 	}
 
-	SYSLOG_ERROR("connection fd=%d flow=%d sendMessge en-outQueue OK", fd, flow);
+	SYSLOG_DEBUG("connection fd=%d flow=%d sendMessge en-outQueue OK", fd, flow);
 	return 0;
 }
 
