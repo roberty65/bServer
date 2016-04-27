@@ -126,7 +126,7 @@ int Connection::onWritable(int fd)
 	BPROF_TRACE(BPT_CONN_WRITABLE)
 
 	assert(this->fd == fd);
-	SYSLOG_DEBUG("connection fd=%d flow=%d onWritable", fd, flow);
+	SYSLOG_DEBUG("connection fd=%d flow=%d onWritable. qsize=%ld", fd, flow, (long)(outQueue->size() + (outMsg == NULL ? 0 : 1)));
 
 	if (outMsg == NULL) {
 		if (outQueue->empty()) {
@@ -216,7 +216,8 @@ int Connection::sendMessage(Message *msg)
 		outQueue->push_back(msg);
 	}
 
-	SYSLOG_DEBUG("connection fd=%d flow=%d sendMessge en-outQueue OK", fd, flow);
+	SYSLOG_DEBUG("connection fd=%d flow=%d sendMessge en-outQueue(qsize=%ld) OK",
+		fd, flow, (long)(outQueue->size() + (outMsg == NULL ? 0 : 1)));
 	return 0;
 }
 

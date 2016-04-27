@@ -3,7 +3,7 @@ include  ../../../Makefile.rules
 INC = -I ../../../common/include -I ../include
 LIB = -lpthread
 
-OBJS = Block.o Message.o
+OBJS = Log.o Block.o Message.o
 DEST = ../lib/libProcessor.a
 
 DEPS = $(patsubst %.o, .%.d, $(OBJS))

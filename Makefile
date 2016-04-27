@@ -4,7 +4,8 @@ subdirs = common/src \
 	  frame/main \
 	  frame/testServer/src \
 	  frame/testClient \
-	  serverd/src
+	  serverd/src \
+	  sample/src
 
 targets = all clean distclean
 .PHONY: $(targets)

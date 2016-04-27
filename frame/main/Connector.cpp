@@ -94,9 +94,15 @@ int Connector::open()
 
 int Connector::destroy()
 {
-	SYSLOG_ERROR("connector(%s) is cleared, outQ-size=%d", address, (outMsg == NULL ? 0 : 1) + 0);
+	SYSLOG_ERROR("connector(%s) is cleared, outQ-size=%ld", address, (long)((outMsg == NULL ? 0 : 1) + outQueue->size()));
+
+	if (inMsg != NULL) {
+		Message::destroy(inMsg);
+		inMsg = NULL;
+	}
 
 	if (outMsg != NULL) {
+		outMsg->setRptr(0);	// reset it and re-send next time
 		outQueue->push_front(outMsg);
 		outMsg = NULL;
 	}
