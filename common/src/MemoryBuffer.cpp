@@ -72,7 +72,10 @@ int MemoryBuffer::writeString(const char *buf, size_t size)
 int MemoryBuffer::resize(size_t added)
 {
 	size_t nsize = bsize + added, n = 1;
-	while (n < nsize) n = n << 1;
+	if (nsize < bsize) return -1;	// overflow
+
+	if (nsize >= (((size_t)1) << (8 * sizeof(size_t) - 1))) n = nsize;
+	else while (n < nsize) n = n << 1;
 	
 	unsigned char *nbuf = new (std::nothrow)unsigned char[n];
 	if (nbuf == NULL) return -1;
