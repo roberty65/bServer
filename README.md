@@ -3,3 +3,6 @@ bServer is a multi-thread server frame which handle incoming and outcoming messa
 
 # Usage
 see sample/Echo.h, Echo.cpp
+
+# Introduction
+see https://github.com/roberty65/bServer/blob/master/doc/Intro%20bServer.pptx
