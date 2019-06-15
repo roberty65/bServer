@@ -50,6 +50,7 @@ static int __send_req(int fd, int cmd, char *reqbuf, int size, const char *tag)
 	h->ver = 1;
 	h->syn = 2;
 	h->ack = 3;
+	*(int *)(h + 1) = 0; // to tell echo rsp immediately
 
 	while (true) {
 		ssize_t wlen = beyondy::XbsWriteN(fd, reqbuf, msize, timeout);

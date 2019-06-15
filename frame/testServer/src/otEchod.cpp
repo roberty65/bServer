@@ -86,7 +86,7 @@ int main(int argc, char **argv)
         }
 
         if (events_watch_add(efd, fd, EPOLLIN) < 0)
-		return 4;
+			return 4;
 
         while (true) {
                 long wtime = 1000; /* 1s */
@@ -98,8 +98,8 @@ int main(int argc, char **argv)
                                 if (cfd >= 0) events_watch_add(efd, cfd, EPOLLIN);
                         }
                         else if (handle_events(ee->data.fd, ee->events) < 0) {
-				events_watch_del(efd, ee->data.fd);
-				close(ee->data.fd);
+							events_watch_del(efd, ee->data.fd);
+							close(ee->data.fd);
                         }
                 }
         }
