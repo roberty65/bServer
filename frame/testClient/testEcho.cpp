@@ -250,7 +250,7 @@ static void test004_mt_async_req_rsp()
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
-		fprintf(stderr, "Usage: %s host [cmd] [thread-cnt]\n", argv[0]);
+		fprintf(stderr, "Usage: %s host(like tcp://127.0.0.1:5010) [cmd] [thread-cnt]\n", argv[0]);
 		exit(0);
 	}
 

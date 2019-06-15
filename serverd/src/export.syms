@@ -1,4 +1,9 @@
-VER_1.0 {
-	global:
-		getConnector;
+{
+	getConnector;
+	sysLogHandle;
+	_ZN9LogHandle5doLogEiPKcz;
+	_ZN7beyondy5Async7Message7destroyEPS1_;
+	_ZN7beyondy5Async7Message6createEii;
+	_ZN7beyondy5Async7Message6createEmii;
+
 };

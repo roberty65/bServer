@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 
 	beyondy::Async::EventManager *emgr = new beyondy::Async::EventManager(outQ, 1024);
 
-	retval = emgr->addListener("inet@0.0.0.0:5010/tcp", inQ, processor, 100);
+	retval = emgr->addListener("tcp://0.0.0.0:5010", inQ, processor, 100);
 	if (retval < 0) {
 		SYSLOG_ERROR("addListener failed");
 		return 1;

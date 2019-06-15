@@ -28,6 +28,7 @@ DEPS = $(patsubst %.o, .%.d, $(OBJS) $(OBJ2) $(OBJ3))
 all: $(DEST) $(DST2) $(DST3)
 
 $(DEST): $(OBJS)
+	@mkdir -p ../bin
 	g++ -o $@ $(CXXFLAGS) $(LDFLAGS) $(OBJS) $(LIB)
 $(DST2): $(OBJ2)
 	g++ -o $@ $(CXXFLAGS) $(OBJ2) $(LDFLAGS) -L $(COM_LIB) -lcommon -lpthread

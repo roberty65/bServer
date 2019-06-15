@@ -11,7 +11,7 @@ FSH_LIB=../../frame/share/lib/
 FRM_SRC=../../frame/main/
 
 INC = -I $(COM_INC) -I $(FSH_INC) -I $(FRM_SRC)
-LIB = -L $(FRM_SRC) -lFrame -L $(FSH_LIB) -lProcessor -L $(COM_LIB) -lcommon -ldl -lpthread
+LIB = -L $(FRM_SRC) -lFrame -L $(FSH_LIB) -lProcessor -L $(COM_LIB) -lcommon -ldl -lpthread -Wl,--dynamic-list=export.syms
 
 DEST = ../bin/bServerd
 OBJS = main.o
@@ -25,8 +25,8 @@ DEPS = $(patsubst %.o, .%.d, $(OBJS) $(OBJ2))
 all: mkdirs $(DEST) $(LIBO)
 
 $(DEST): $(OBJS)
-	g++ -o $@ -rdynamic $(CXXFLAGS) $(LDFLAGS) $(OBJS) $(LIB)
-	#g++ -o $@ $(OBJS) $(LIB) #-Wl,--dynamic-list=export.syms
+	#g++ -o $@ -rdynamic $(CXXFLAGS) $(LDFLAGS) $(OBJS) $(LIB)
+	g++ -o $@ $(OBJS) $(LIB)
 
 $(LIBO): $(OBJ2)
 	g++ -o $@ -shared $(CXXFLAGS) $(LDFLAGS) $(OBJ2) #-ldl
@@ -37,7 +37,7 @@ $(LIBO): $(OBJ2)
 	gcc -c -o $@ $(INC) $(CXXFLAGS) $<
 
 mkdirs:
-	mkdir -p ../bin ../lib ../logs
+	@mkdir -p ../bin ../lib ../logs
 clean:
 	rm -f $(OBJS) $(OBJ2) *~ *.s *.ii *.i
 distclean: clean

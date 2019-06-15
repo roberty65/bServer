@@ -52,6 +52,12 @@ int LogHandle::doLog(int level, const char *fmt...)
 
 	va_end(ap);
 
+	// log to stdout
+	if (basePath[0] == '\0' or (basePath[0] == '-' && basePath[1] == '\0')) {
+		fprintf(stdout, "%s", buf);
+		return 0;
+	}
+
 	int fd = open(basePath, O_CREAT | O_APPEND | O_WRONLY, 0664);
 	if (fd < 0) return -1;
 
