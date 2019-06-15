@@ -33,6 +33,11 @@ public:
 	// DO LESS AS CAN AS POSSIBLE
 	// msg->ts_process_end only set when status is OK
 	virtual int onSent(Message *msg, int status) = 0;
+	
+	// call when connection is established/closed
+	virtual int onConnected(const int& flow) { return 0; }
+	virtual int onDisconnected(const int& flow) {return 0; }
+	
 	// will append message into outQueue
 	int sendMessage(Message *msg) { if (sf != NULL) return (*sf)(msg, data); else return -1; }
 public:	// !!!DO NOT CALL IT. It is just be called by framework in startup

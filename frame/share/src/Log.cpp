@@ -56,7 +56,7 @@ int LogHandle::doLog(int level, const char *fmt...)
 	if (fd < 0) return -1;
 
 	ssize_t wlen = write(fd, buf, mlen);
-	assert(wlen == mlen);
+	//assert(wlen == mlen);
 
 	close(fd);
 

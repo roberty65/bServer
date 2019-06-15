@@ -258,6 +258,7 @@ int Connection::destroy() {
 	
 	if (this->creatorType == CT_LISTENER) {
 		Listener *listener = this->parentListener;
+		proc->onDisconnected(flow);
 		listener->destroyConnection(this);
 	}
 

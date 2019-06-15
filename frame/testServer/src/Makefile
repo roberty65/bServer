@@ -25,7 +25,7 @@ OBJ3 = otEchod.o
 DEPS = $(patsubst %.o, .%.d, $(OBJS) $(OBJ2) $(OBJ3))
 
 .PHONY: all clean distclean mkdirs
-all: $(DEST) $(DST2) $(DST3)
+all: mkdirs $(DEST) $(DST2) $(DST3)
 
 $(DEST): $(OBJS)
 	g++ -o $@ $(CXXFLAGS) $(LDFLAGS) $(OBJS) $(LIB)
