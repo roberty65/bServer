@@ -1,7 +1,6 @@
 /* MemoryBuffer.cpp
  * Copyright by Beyondy.c.w 2002-2020
 **/
-#include <malloc.h>
 #include <string.h>
 #include <new>
 

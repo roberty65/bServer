@@ -1,9 +1,9 @@
 include  ../../../Makefile.rules
 
-INC = -I ../../../common/include -I ../include
+INC = -I ../include -I ../../../common/include 
 LIB = -lpthread
 
-OBJS = Log.o Block.o Message.o
+OBJS = Log.o Block.o Message.o #Http11.o
 DEST = ../lib/libProcessor.a
 
 DEPS = $(patsubst %.o, .%.d, $(OBJS))

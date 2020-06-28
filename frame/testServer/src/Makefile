@@ -10,7 +10,7 @@ FSH_LIB=../../share/lib/
 
 FRM_SRC=../../main/
 
-INC = -I $(COM_INC) -I $(FSH_INC) -I $(FRM_SRC)
+INC = -I $(FRM_SRC) -I $(FSH_INC) -I $(COM_INC)
 LIB = -L $(FRM_SRC) -lFrame -L $(FSH_LIB) -lProcessor -L $(COM_LIB) -lcommon -lpthread
 
 DEST = ../bin/testServerd

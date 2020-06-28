@@ -1,6 +1,6 @@
 include  ../../Makefile.rules
 
-INC = -I ../../common/include -I ../share/include
+INC = -I ../share/include -I ../../common/include
 LIB = -lpthread
 
 OBJS = EventHandler.o Connection.o Connector.o Listener.o EventManager.o MtWorker.o Processor.o

@@ -137,8 +137,8 @@ static struct sized_slab_cache sized_caches[] = {
 
 
 static slab_cache_t slab_cache_cache = {
-	lock: PTHREAD_MUTEX_INITIALIZER,		// lock
-	name: { 0, },					// name
+	.lock = PTHREAD_MUTEX_INITIALIZER,		// lock
+	.name = { 0, },					// name
 };
 //static struct list_head hb_head = LIST_HEAD_INIT(hb_head);
 //static pthread_mutex_t hb_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -683,11 +683,11 @@ void slab_free(void* addr, slab_size_t size)
 		if ((sb = obj_to_slab(sized_caches[i].sc, addr)) != NULL) {
 			return __slab_free(sb, addr);
 		} else {
-			*(int *)0x0 = 0x1234;
+			*(volatile int *)0x0 = 0x1234;
 		}
 	} else {
 		if (huge_free(addr, size) < 0) {
-			*(int *)0x0 = 0x1234;
+			*(volatile int *)0x0 = 0x1234;
 		}
 	}
 }

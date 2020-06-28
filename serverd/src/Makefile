@@ -10,7 +10,7 @@ FSH_LIB=../../frame/share/lib/
 
 FRM_SRC=../../frame/main/
 
-INC = -I $(COM_INC) -I $(FSH_INC) -I $(FRM_SRC)
+INC = -I $(FRM_SRC) -I $(FSH_INC) -I $(COM_INC)
 LIB = -L $(FRM_SRC) -lFrame -L $(FSH_LIB) -lProcessor -L $(COM_LIB) -lcommon -ldl -lpthread -Wl,--dynamic-list=export.syms
 
 DEST = ../bin/bServerd

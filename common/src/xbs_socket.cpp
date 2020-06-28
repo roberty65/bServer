@@ -174,7 +174,7 @@ int XbsGetFlags (int fd)
 **/
 int XbsGetReuse (int fd)
 {
-	int address, port = 0;
+	int address = 0, port = 0;
 	socklen_t addrlen = sizeof(address);
 
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &address, addrlen) < 0) return -1;
